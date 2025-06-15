@@ -43,10 +43,11 @@ import {
   Block as BlockIcon, // For Block action
   CheckCircleOutline as UnblockIcon, // For Unblock action
   DeleteForever as DeleteForeverIcon, // For permanent delete
-  CircularProgress, // For loading states
   WarningAmber as WarningIcon,
 } from "@mui/icons-material"
 import { Alert as MuiAlert } from "@mui/material" // Renamed to avoid conflict with alertInfo state
+import CircularProgress from "@mui/material/CircularProgress"; // for loading states
+
 
 // API service (consider moving to a dedicated services/api.js or customerService.js)
 // For now, placeholder functions. Replace with actual API calls.
