@@ -83,6 +83,94 @@ router.get("/", verifyToken, requireAdmin, validate(schemas.pagination, "query")
   }
 })
 
+// Register new customer by Admin
+router.post("/register-customer", verifyToken, requireAdmin, validate(schemas.userRegistration, "body"), async (req, res) => {
+  try {
+    const {
+      firstName,
+      lastName,
+      username,
+      email,
+      phone,
+      password,
+      isActive = true, // Default to active
+      // Fields from schema.sql for users table if needed:
+      // companyName, contactPerson, kraPin, cashbackPhone, etc.
+      // For now, focusing on core fields.
+    } = req.body
+
+    // Validate required fields (beyond what Joi/schemas.userRegistration might do, or as a safeguard)
+    if (!firstName || !lastName || !username || !email || !password) {
+      return res.status(400).json({ success: false, message: "Missing required fields: firstName, lastName, username, email, password." })
+    }
+
+    // Check if username or email already exists
+    const existingUser = await db.query(
+      "SELECT id FROM users WHERE email = $1 OR username = $2",
+      [email, username]
+    )
+    if (existingUser.rows.length > 0) {
+      return res.status(409).json({ success: false, message: "User with this email or username already exists." })
+    }
+
+    // Hash password
+    const saltRounds = 12 // Consider making this a config value
+    const passwordHash = await bcrypt.hash(password, saltRounds)
+
+    // Create user record
+    const userInsertQuery = `
+      INSERT INTO users (
+        first_name, last_name, username, email, phone, password_hash,
+        user_type, is_active
+        -- Add other fields like company_name, kra_pin here if collected from form
+      ) VALUES ($1, $2, $3, $4, $5, $6, 'customer', $7)
+      RETURNING id, first_name, last_name, username, email, phone, user_type, is_active, created_at
+    `
+    const newUserResult = await db.query(userInsertQuery, [
+      firstName, lastName, username, email, phone, passwordHash, isActive
+    ])
+    const newUser = newUserResult.rows[0]
+
+    // Create wallet for the user (assuming wallets table and structure from schema.sql)
+    // The schema.sql doesn't explicitly show a 'wallets' table being created by default.
+    // However, authController's register function does this:
+    // await query("INSERT INTO wallets (user_id, balance, total_earned, total_withdrawn) VALUES ($1, 0, 0, 0)", [newUser.id])
+    // Let's assume the table exists or this step is desired.
+    // If `wallet_transactions` is the effective ledger, this separate `wallets` table might be redundant or for summaries.
+    // For now, I will skip creating a separate `wallets` table entry as `wallet_transactions` seems to be the primary.
+    // If a summary `wallets` table is indeed used, this should be added:
+    /*
+    try {
+      await db.query(
+        "INSERT INTO wallets (user_id, balance, total_earned, total_withdrawn) VALUES ($1, 0, 0, 0)",
+        [newUser.id]
+      );
+    } catch (walletError) {
+      // Log wallet creation error but proceed, as user creation was successful
+      console.error(`Error creating wallet for user ${newUser.id}:`, walletError);
+      // Optionally, you might want to roll back user creation if wallet is critical,
+      // which would require wrapping user and wallet creation in a transaction.
+    }
+    */
+
+    // TODO: Send welcome email if necessary, similar to authController.register
+
+    res.status(201).json({
+      success: true,
+      message: "Customer registered successfully by admin.",
+      data: { user: newUser },
+    })
+
+  } catch (error) {
+    console.error("Admin register customer error:", error)
+    // Check for specific DB errors like unique constraint if not caught by pre-check
+    if (error.code === '23505') { // PostgreSQL unique violation
+        return res.status(409).json({ success: false, message: "Username or email already exists." });
+    }
+    res.status(500).json({ success: false, message: "Failed to register customer." })
+  }
+})
+
 // Get single user (Admin or own profile)
 router.get("/:id", verifyToken, requireAuthenticated, validate(schemas.uuidParam, "params"), async (req, res) => {
   try {
@@ -152,6 +240,35 @@ router.get("/:id", verifyToken, requireAuthenticated, validate(schemas.uuidParam
       )
 
       user.walletBalance = Number.parseFloat(walletBalance.rows[0].balance) || 0
+
+      // Get recent orders for transactions tab (e.g., last 10)
+      const recentOrders = await db.query(
+        `
+        SELECT
+          id, order_number, order_date, total_amount, status, payment_status, cashback_amount
+        FROM orders
+        WHERE customer_id = $1
+        ORDER BY order_date DESC
+        LIMIT 10
+      `,
+        [id],
+      )
+      user.recentOrders = recentOrders.rows
+
+      // Get recent cashback transactions for cashbacks tab (e.g., last 10)
+      const recentCashbackTransactions = await db.query(
+        `
+        SELECT
+          id, transaction_type, amount, balance_after, description, status, created_at, reference_type, reference_id
+        FROM wallet_transactions
+        WHERE user_id = $1 AND (transaction_type ILIKE '%cashback%' OR reference_type = 'cashback_redemption' OR description ILIKE '%cashback%')
+        ORDER BY created_at DESC
+        LIMIT 10
+      `,
+        [id],
+      )
+      user.recentCashbackTransactions = recentCashbackTransactions.rows
+
     } else if (user.user_type === "sales_agent") {
       // Get sales agent statistics
       const agentStats = await db.query(

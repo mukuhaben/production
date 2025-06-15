@@ -25,6 +25,7 @@ import GRNManagement from "../../../components/admin/InventoryManagement"
 import SalesManagement from "../../../components/admin/SalesManagement"
 import SupplierManagement from "../../../components/admin/SupplierManagement"
 import SalesAgentAdminPanel from "../../../components/admin/SalesAgentAdminPanel"
+import CustomerManagement from "../../../components/admin/CustomerManagement" // Import CustomerManagement
 
 // Tab panel component for clean content rendering
 function TabPanel(props) {
@@ -492,6 +493,11 @@ const AdminPage = () => {
         {/* Sales Agents - E-commerce Team Management with CRUD */}
         <TabPanel value={tabValue} index={7}>
           <SalesAgentAdminPanel />
+        </TabPanel>
+
+        {/* Customer Management Tab */}
+        <TabPanel value={tabValue} index={8}>
+          <CustomerManagement />
         </TabPanel>
       </Box>
     </Box>

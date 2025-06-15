@@ -639,6 +639,15 @@ const AdminNavigation = ({
               },
             ])}
           </Box>
+
+          {/* Customer Management Button */}
+          <AdminNavButton
+            startIcon={<People sx={{ fontSize: 18 }} />} // Using People icon for now
+            active={activeTab === 8} // New tab index
+            onClick={() => handleTabClick(8)} // New tab index
+          >
+            Customers
+          </AdminNavButton>
         </Box>
 
         {/* Right side icons - Store and Profile only */}
