@@ -2,6 +2,7 @@ import express from "express"
 import { query, transaction } from "../config/database.js"
 import { verifyToken, requireAdmin } from "../middlewares/auth.js"
 import { validate, schemas } from "../middlewares/validation.js"
+import ProductController from "../controllers/product.js" // Import ProductController
 
 const router = express.Router()
 
@@ -93,6 +94,18 @@ router.get("/", validate(schemas.pagination, "query"), async (req, res) => {
       success: false,
       message: "Failed to fetch products",
     })
+  }
+})
+
+// Bulk Import Products (Admin only)
+router.post("/bulk-import", verifyToken, requireAdmin, async (req, res) => {
+  // This controller logic will be moved to controllers/product.js later
+  try {
+    console.log("Bulk import request body:", req.body)
+    res.status(200).json({ message: "Bulk import endpoint hit. Data received.", data: req.body })
+  } catch (error) {
+    console.error("Bulk import error:", error)
+    res.status(500).json({ success: false, message: "Bulk import failed." })
   }
 })
 
@@ -326,6 +339,9 @@ router.post("/", verifyToken, requireAdmin, async (req, res) => {
     })
   }
 })
+
+// Bulk Import Products (Admin only)
+router.post("/bulk-import", verifyToken, requireAdmin, ProductController.bulkImportProducts)
 
 // Update product (Admin only)
 router.put("/:id", verifyToken, requireAdmin, validate(schemas.uuidParam, "params"), async (req, res) => {

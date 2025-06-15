@@ -54,6 +54,59 @@ import {
   AttachMoney as MoneyIcon,
 } from "@mui/icons-material"
 import InvoiceForm from "./InvoiceForm"
+import firstCraftLogo from "../../../assets/images/FirstCraft-logo.png" // Import the logo
+
+// Define print styles
+const printStyles = `
+  @media print {
+    body * {
+      visibility: hidden;
+    }
+    .printable-invoice, .printable-invoice * {
+      visibility: visible;
+    }
+    .printable-invoice {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: auto;
+      margin: 0;
+      padding: 20px;
+      box-shadow: none;
+    }
+    .no-print, .no-print * {
+      display: none !important;
+    }
+    .printable-invoice .invoice-header-print {
+      background-color: #0056B3 !important; /* FirstCraft Primary Blue */
+      color: white !important;
+      padding: 16px !important;
+      border-radius: 4px 4px 0 0 !important;
+      -webkit-print-color-adjust: exact !important; /* Chrome, Safari */
+      print-color-adjust: exact !important; /* Firefox, Edge */
+    }
+    .printable-invoice .invoice-title-print {
+      color: white !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+     .printable-invoice .print-table-header th {
+      background-color: #e0e0e0 !important; /* Light grey for table headers */
+      color: #333 !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    .printable-invoice .total-summary-print {
+       background-color: #f0f0f0 !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+     .printable-invoice img { /* Ensure images are printed */
+      max-width: 100% !important;
+    }
+  }
+`;
 
 /**
  * InvoiceManagement Component
@@ -812,28 +865,53 @@ const InvoiceManagement = () => {
         <DialogTitle>
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <Typography variant="h6">Invoice Details</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {selectedInvoice?.invoiceNumber}
+            <Typography variant="body2" color="text.secondary" className="no-print">
+              {/* This specific invoice number display might be redundant if it's in the printable area already */}
             </Typography>
           </Box>
         </DialogTitle>
         <DialogContent>
+          {/* Inject print styles */}
+          <style>{printStyles}</style>
           {selectedInvoice && (
-            <Box>
-              {/* Company Header */}
-              <Box sx={{ textAlign: "center", mb: 3, p: 2, bgcolor: "#f5f5f5", borderRadius: 1 }}>
-                <Typography variant="h5" sx={{ fontWeight: 600, color: "#1976d2" }}>
-                  First Craft Ltd
-                </Typography>
-                <Typography variant="body2">P.O.Box 38869-00623</Typography>
-                <Typography variant="body2">Nairobi Kenya</Typography>
-                <Typography variant="body2">
-                  Email: manager@fcl.co.ke | Website: https://www.fcl.co.ke | KRA Pin: P052130436J
-                </Typography>
+            <Box className="printable-invoice"> {/* Add printable area class */}
+              {/* Logo and Company Header */}
+              <Box
+                className="invoice-header-print" // Class for print styling
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  mb: 2,
+                  p: 2,
+                  borderBottom: '1px solid #eee',
+                  // Default screen styles (can be overridden by printStyles)
+                  bgcolor: { xs: "#f5f5f5", print: "#0056B3" },
+                  color: { xs: "inherit", print: "white" }
+                }}
+              >
+                <Box>
+                  <img src={firstCraftLogo} alt="FirstCraft Logo" style={{ height: '60px', marginBottom: '10px' }} />
+                  <Typography variant="h5" sx={{ fontWeight: 600, color: "#1976d2" }}>
+                    First Craft Ltd
+                  </Typography>
+                  <Typography variant="body2">P.O.Box 38869-00623</Typography>
+                  <Typography variant="body2">Nairobi Kenya</Typography>
+                  <Typography variant="body2">
+                    Email: manager@fcl.co.ke | Website: https://www.fcl.co.ke
+                  </Typography>
+                  <Typography variant="body2">KRA Pin: P052130436J</Typography>
+                </Box>
+                <Box sx={{ textAlign: "right" }}>
+                    <Typography variant="h4" className="invoice-title-print" sx={{ fontWeight: 700, color: {xs: "#333", print: "white"}, textTransform: "uppercase" }}>
+                      Invoice
+                    </Typography>
+                </Box>
               </Box>
 
+
               {/* Invoice Info */}
-              <Grid container spacing={3} sx={{ mb: 3 }}>
+              <Grid container spacing={3} sx={{ mb: 3, p:2 }}>
                 <Grid item xs={6}>
                   <Typography variant="subtitle2" color="text.secondary">
                     Bill To:
@@ -877,6 +955,12 @@ const InvoiceManagement = () => {
                         day: "2-digit",
                       })}
                     </Typography>
+                    <Typography variant="body2" sx={{ color: selectedInvoice.status === 'paid' ? 'green' : 'inherit' }}>
+                      <strong>Date Paid:</strong>{" "}
+                      {selectedInvoice.datePaid
+                        ? new Date(selectedInvoice.datePaid).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })
+                        : (selectedInvoice.status === "paid" ? selectedInvoice.invoiceDate.toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' }) : "N/A")}
+                    </Typography>
                     <Typography variant="body2">
                       <strong>Source:</strong> {selectedInvoice.source}
                     </Typography>
@@ -885,10 +969,10 @@ const InvoiceManagement = () => {
               </Grid>
 
               {/* Items Table */}
-              <TableContainer sx={{ mb: 3 }}>
+              <TableContainer sx={{ mb: 3, p:2 }}>
                 <Table>
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: "#f0f0f0" }}>
+                  <TableHead className="print-table-header">
+                    <TableRow sx={{ bgcolor: {xs: "#f0f0f0", print: "#e0e0e0"} }}>
                       <TableCell>#</TableCell>
                       <TableCell>Description</TableCell>
                       <TableCell align="right">Quantity</TableCell>
@@ -931,7 +1015,7 @@ const InvoiceManagement = () => {
                   </Typography>
                 </Grid>
                 <Grid item xs={4}>
-                  <Paper sx={{ p: 2, bgcolor: "#f5f5f5" }}>
+                  <Paper className="total-summary-print" sx={{ p: 2, bgcolor: {xs: "#f5f5f5", print: "#f0f0f0"} }}>
                     <Typography variant="subtitle2" sx={{ mb: 1 }}>
                       Invoice Summary
                     </Typography>
@@ -1003,9 +1087,9 @@ const InvoiceManagement = () => {
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
+        <DialogActions className="no-print">
           <Button onClick={() => setViewDialogOpen(false)}>Close</Button>
-          <Button variant="outlined" startIcon={<PrintIcon />}>
+          <Button variant="outlined" startIcon={<PrintIcon />} onClick={() => window.print()}>
             Print
           </Button>
           <Button variant="contained" startIcon={<DownloadIcon />}>

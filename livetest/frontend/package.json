@@ -20,6 +20,7 @@
     "axios": "^1.6.2",
     "dayjs": "^1.11.10",
     "framer-motion": "^10.16.16",
+    "papaparse": "^5.5.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-dropzone": "^14.2.3",
@@ -30,6 +31,7 @@
     "react-router-dom": "^6.20.1",
     "recharts": "^2.8.0",
     "swiper": "^11.2.8",
+    "xlsx": "^0.18.5",
     "zustand": "^4.4.7"
   },
   "devDependencies": {
