@@ -115,10 +115,14 @@ const AccountPage = () => {
             username: user.username || `${user.first_name || ""} ${user.last_name || ""}`.trim(),
             email: user.email || "",
             phone: user.phone_number || "",
-            // Assuming addresses is an array and we take the first one as primary for simplicity
-            // A more robust solution would identify a 'primary' address if the backend provides such a flag
             address: user.addresses && user.addresses.length > 0
-              ? `${user.addresses[0].street}, ${user.addresses[0].city}, ${user.addresses[0].postal_code}, ${user.addresses[0].country}`
+              ? [
+                  user.addresses[0].street,
+                  user.addresses[0].city,
+                  user.addresses[0].state_province, // Added state_province as per suggestion, can be removed if not applicable
+                  user.addresses[0].postal_code,
+                  user.addresses[0].country,
+                ].filter(Boolean).join(", ") || "No address details found"
               : "No address provided",
             profilePicture: user.profile_picture_url || null,
             addresses: user.addresses || [],
@@ -364,74 +368,8 @@ const AccountPage = () => {
         </>
         )}
 
-        <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
-          <Tabs
-            value={activeTab}
-            onChange={handleTabChange}
-            variant={isMobile ? "scrollable" : "fullWidth"}
-            scrollButtons={isMobile ? "auto" : false}
-            allowScrollButtonsMobile
-            aria-label="account tabs"
-          >
-            <Tab icon={<Person />} label="Profile" iconPosition="start" sx={{ minHeight: 48, textTransform: "none" }} />
-            <Tab
-              icon={<ShoppingBag />}
-              label="My Orders"
-              iconPosition="start"
-              sx={{ minHeight: 48, textTransform: "none" }}
-            />
-            <Tab
-              icon={
-                // <Badge badgeContent={unreadCount} color="error">
-                  <Inbox />
-                // </Badge>
-              }
-              label="Inbox"
-              iconPosition="start"
-              sx={{ minHeight: 48, textTransform: "none" }}
-            />
-            <Tab
-              icon={<Settings />}
-            </Typography>
-          </Box>
-        </Box>
-        </>
-        )}
-
-        <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
-          <Tabs
-            value={activeTab}
-            onChange={handleTabChange}
-            variant={isMobile ? "scrollable" : "fullWidth"}
-            scrollButtons={isMobile ? "auto" : false}
-            allowScrollButtonsMobile
-            aria-label="account tabs"
-          >
-            <Tab icon={<Person />} label="Profile" iconPosition="start" sx={{ minHeight: 48, textTransform: "none" }} />
-            <Tab
-              icon={<ShoppingBag />}
-              label="My Orders"
-              iconPosition="start"
-              sx={{ minHeight: 48, textTransform: "none" }}
-            />
-            <Tab
-              icon={
-                // <Badge badgeContent={unreadCount} color="error">
-                  <Inbox />
-                // </Badge>
-              }
-              label="Inbox"
-              iconPosition="start"
-              sx={{ minHeight: 48, textTransform: "none" }}
-            />
-            <Tab
-              icon={<Settings />}
-              label="Settings"
-              iconPosition="start"
-              sx={{ minHeight: 48, textTransform: "none" }}
-            />
-          </Tabs>
-        </Box>
+        {/* The first Box with Tabs is inside the Paper and conditional rendering, this is CORRECT */}
+        {/* The redundant Box with Tabs that was here has been REMOVED. */}
 
         {/* Profile Tab */}
         {activeTab === 0 && (
@@ -579,8 +517,8 @@ const AccountPage = () => {
               </Grid>
 
               <Grid item xs={12} md={6}>
-              </>
-              )}
+                {/* This Grid item is for the right column, intended for Change Password */}
+                {/* The premature closing tags </> and )} will be moved after this section */}
                 <Typography variant="h6" component="h3" gutterBottom>
                   Change Password
                 </Typography>
@@ -624,8 +562,10 @@ const AccountPage = () => {
                 >
                   Update Password
                 </Button>
-              </Grid>
-            </Grid>
+              </Grid> {/* End of Right Column (Change Password) */}
+            </Grid> {/* End of Main Grid container for Profile Tab */}
+          </>
+          )} {/* End of conditional rendering (profileLoading/profileError) */}
           </Box>
         )}
 
@@ -674,7 +614,7 @@ const AccountPage = () => {
                           <TableCell>
                             {order.items && order.items.length > 0 ? (
                               <ul style={{paddingLeft: 15, margin: 0}}>
-                                {order.items.slice(0, 2).map(item => ( // Show first 2 items
+                                {order.items.slice(0, 2).map((item, index) => ( // Corrected: Added index parameter
                                   <li key={item.product_id || item.id}>
                                     {item.product_name} (Qty: {item.quantity})
                                     {order.items.length > 2 && index === 1 && "..."}
