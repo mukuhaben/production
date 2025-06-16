@@ -28,8 +28,9 @@ import {
   Stack,
   CircularProgress,
 } from "@mui/material"
-import { Search, Edit, Delete, Visibility, Add } from "@mui/icons-material"
+import { Search, Edit, Delete, Visibility, Add, UploadFile as UploadFileIcon } from "@mui/icons-material" // Added UploadFileIcon
 import { productsAPI } from "../../services/api.js"
+import BulkImportModal from "./BulkImportModal"; // Import BulkImportModal
 
 export default function ManageItems({ onEditItem, onAddNewItem }) {
   const [items, setItems] = useState([])
@@ -40,6 +41,15 @@ export default function ManageItems({ onEditItem, onAddNewItem }) {
   const [viewDialog, setViewDialog] = useState(false)
   const [successMessage, setSuccessMessage] = useState("")
   const [error, setError] = useState("")
+  const [showBulkImportModal, setShowBulkImportModal] = useState(false);
+
+  const handleOpenBulkImportModal = () => {
+    setShowBulkImportModal(true);
+  };
+
+  const handleCloseBulkImportModal = () => {
+    setShowBulkImportModal(false);
+  };
 
   // Fetch products from backend
   useEffect(() => {
@@ -182,7 +192,41 @@ export default function ManageItems({ onEditItem, onAddNewItem }) {
             View, edit, and manage your product inventory
           </Typography>
         </Box>
-        <Button
+        <Box> {/* Wrapper for buttons */}
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={onAddNewItem}
+            sx={{ // Restoring original sx props for Add New Item button
+              bgcolor: "#1976d2",
+              "&:hover": { bgcolor: "#1565c0" },
+              textTransform: "none",
+              fontWeight: 600,
+              px: 3,
+              py: 1.5,
+              borderRadius: 2,
+              mr: 1 // Added margin for spacing
+            }}
+          >
+            Add New Item
+          </Button>
+          <Button
+            variant="outlined" // Styling for Bulk Import button
+            startIcon={<UploadFileIcon />}
+            onClick={handleOpenBulkImportModal}
+            sx={{ // Adding similar styling for consistency
+              textTransform: "none",
+              fontWeight: 600,
+              px: 3,
+              py: 1.5,
+              borderRadius: 2,
+            }}
+          >
+            Bulk Import
+          </Button>
+        </Box>
+        {/* Old Button Styling, kept for reference if needed, but new one is simpler and inside a Box for layout */}
+        {/* <Button
           variant="contained"
           startIcon={<Add />}
           onClick={onAddNewItem}
@@ -197,7 +241,7 @@ export default function ManageItems({ onEditItem, onAddNewItem }) {
           }}
         >
           Add New Item
-        </Button>
+        </Button> */}
       </Box>
 
       {/* Success Message */}
@@ -547,6 +591,13 @@ export default function ManageItems({ onEditItem, onAddNewItem }) {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Bulk Import Modal */}
+      <BulkImportModal
+        open={showBulkImportModal}
+        onClose={handleCloseBulkImportModal}
+        // You might need to pass a callback to refresh items after import, e.g., onImportSuccess={fetchProducts}
+      />
     </Box>
   )
 }

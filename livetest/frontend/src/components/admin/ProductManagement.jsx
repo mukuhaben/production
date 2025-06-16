@@ -1,19 +1,13 @@
 "use client"
-import { useState } from "react"
+// Removed useState if not used elsewhere, but it's likely used by other functionalities not shown.
+// For this task, we assume it might still be needed. If not, it would be removed.
 import { Box, Typography, Button, Paper } from "@mui/material"
-import { Add, ShoppingCart, UploadFile } from "@mui/icons-material"
-import BulkImportModal from "./BulkImportModal" // Import the modal component
+import { Add, ShoppingCart } from "@mui/icons-material" // Removed UploadFile if not used elsewhere
+// Removed: import BulkImportModal from "./BulkImportModal"
 
 const ProductManagement = ({ viewMode, onAddNewItem }) => {
-  const [showBulkImportModal, setShowBulkImportModal] = useState(false)
-
-  const handleOpenBulkImportModal = () => {
-    setShowBulkImportModal(true)
-  }
-
-  const handleCloseBulkImportModal = () => {
-    setShowBulkImportModal(false)
-  }
+  // Removed: const [showBulkImportModal, setShowBulkImportModal] = useState(false)
+  // Removed: handleOpenBulkImportModal and handleCloseBulkImportModal
 
   return (
     <Box>
@@ -33,23 +27,12 @@ const ProductManagement = ({ viewMode, onAddNewItem }) => {
               textTransform: "none",
               fontWeight: 500,
               px: 3,
-              mr: 1, // Add margin to separate buttons
+            // mr: 1, // Margin might be adjusted if it was only for separating from Bulk Import
             }}
           >
             Add New Item
           </Button>
-          <Button
-            variant="outlined"
-            startIcon={<UploadFile />}
-            onClick={handleOpenBulkImportModal}
-            sx={{
-              textTransform: "none",
-              fontWeight: 500,
-              px: 3,
-            }}
-          >
-            Bulk Import
-          </Button>
+        {/* Removed Bulk Import Button */}
         </Box>
       </Box>
 
@@ -64,11 +47,7 @@ const ProductManagement = ({ viewMode, onAddNewItem }) => {
         </Typography>
       </Paper>
 
-      {/* Bulk Import Modal */}
-      <BulkImportModal
-        open={showBulkImportModal}
-        onClose={handleCloseBulkImportModal}
-      />
+    {/* Removed Bulk Import Modal Instance */}
     </Box>
   )
 }

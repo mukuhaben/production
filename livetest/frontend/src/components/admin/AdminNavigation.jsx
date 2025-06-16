@@ -39,6 +39,7 @@ import {
   Visibility as ViewIcon,
   Store as StoreIcon,
   LocationOn as LocationIcon,
+  ListAlt as ListAltIcon, // Added for Orders
 } from "@mui/icons-material"
 import { useNavigate } from "react-router-dom"
 
@@ -203,29 +204,34 @@ const AdminNavigation = ({
             onTabChange(null, 2)
             break
 
+          case "orders": // New case for orders
+            console.log(`📍 Navigating to Orders - Action: ${action}`)
+            onTabChange(null, 3)
+            break
+
           case "sales":
             console.log(`📍 Navigating to Sales - Action: ${action}`)
-            onTabChange(null, 3)
+            onTabChange(null, 4) // Shifted index
             break
 
           case "inventory":
             console.log(`📍 Navigating to Inventory - Action: ${action}`)
-            onTabChange(null, 4)
+            onTabChange(null, 5) // Shifted index
             break
 
           case "suppliers":
             console.log(`📍 Navigating to Suppliers - Action: ${action}`)
-            onTabChange(null, 5)
+            onTabChange(null, 6) // Shifted index
             break
 
           case "locations":
             console.log(`📍 Navigating to Locations - Action: ${action}`)
-            onTabChange(null, 6)
+            onTabChange(null, 7) // Shifted index
             break
 
           case "agents":
             console.log(`📍 Navigating to Sales Agents - Action: ${action}`)
-            onTabChange(null, 7)
+            onTabChange(null, 8) // Shifted index
             break
 
           default:
@@ -461,6 +467,15 @@ const AdminNavigation = ({
             ])}
           </Box>
 
+          {/* Orders Management Button */}
+          <AdminNavButton
+            startIcon={<ListAltIcon sx={{ fontSize: 18 }} />}
+            active={activeTab === 3}
+            onClick={() => handleTabClick(3)}
+          >
+            Orders
+          </AdminNavButton>
+
           {/* Sales Dropdown */}
           <Box
             ref={dropdownRefs.sales}
@@ -471,7 +486,7 @@ const AdminNavigation = ({
             <AdminNavButton
               startIcon={<SalesIcon sx={{ fontSize: 18 }} />}
               endIcon={<KeyboardArrowDown sx={{ fontSize: 16 }} />}
-              active={activeTab === 3}
+              active={activeTab === 4} // Shifted index
             >
               Sales
             </AdminNavButton>
@@ -511,7 +526,7 @@ const AdminNavigation = ({
             <AdminNavButton
               startIcon={<Inventory sx={{ fontSize: 18 }} />}
               endIcon={<KeyboardArrowDown sx={{ fontSize: 16 }} />}
-              active={activeTab === 4}
+              active={activeTab === 5} // Shifted index
             >
               GRN
             </AdminNavButton>
@@ -544,7 +559,7 @@ const AdminNavigation = ({
             <AdminNavButton
               startIcon={<SuppliersIcon sx={{ fontSize: 18 }} />}
               endIcon={<KeyboardArrowDown sx={{ fontSize: 16 }} />}
-              active={activeTab === 5}
+              active={activeTab === 6} // Shifted index
             >
               Suppliers
             </AdminNavButton>
@@ -577,7 +592,7 @@ const AdminNavigation = ({
             <AdminNavButton
               startIcon={<LocationIcon sx={{ fontSize: 18 }} />}
               endIcon={<KeyboardArrowDown sx={{ fontSize: 16 }} />}
-              active={activeTab === 6}
+              active={activeTab === 7} // Shifted index
             >
               Locations
             </AdminNavButton>
@@ -617,7 +632,7 @@ const AdminNavigation = ({
             <AdminNavButton
               startIcon={<People sx={{ fontSize: 18 }} />}
               endIcon={<KeyboardArrowDown sx={{ fontSize: 16 }} />}
-              active={activeTab === 7}
+              active={activeTab === 8} // Shifted index
             >
               Sales Agents
             </AdminNavButton>
@@ -643,8 +658,8 @@ const AdminNavigation = ({
           {/* Customer Management Button */}
           <AdminNavButton
             startIcon={<People sx={{ fontSize: 18 }} />} // Using People icon for now
-            active={activeTab === 8} // New tab index
-            onClick={() => handleTabClick(8)} // New tab index
+            active={activeTab === 9} // Shifted index
+            onClick={() => handleTabClick(9)} // Shifted index
           >
             Customers
           </AdminNavButton>

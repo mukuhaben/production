@@ -160,6 +160,9 @@ export const usersAPI = {
   getById: (id) => api.get(`/users/${id}`),
   update: (id, userData) => api.put(`/users/${id}`, userData),
   delete: (id) => api.delete(`/users/${id}`),
+  registerCustomer: (userData) => api.post("/users/register-customer", userData),
+  deactivateUser: (id, reasonData) => api.patch(`/users/${id}/deactivate`, reasonData),
+  reactivateUser: (id) => api.patch(`/users/${id}/reactivate`),
 }
 
 // Wallet API
