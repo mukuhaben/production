@@ -104,6 +104,7 @@ export const corsOptions = {
     
     const allowedOrigins = [
       process.env.FRONTEND_URL,
+      process.env.CORS_ORIGIN,
       "http://localhost:3000",
       "http://localhost:5173",
       "https://production-kappa.vercel.app",
