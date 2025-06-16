@@ -16,7 +16,7 @@ import {
   Box,
 } from "@mui/material";
 import { Visibility as ViewIcon } from "@mui/icons-material";
-import { ordersAPI } from "../../../services/api"; // Adjust path as necessary
+import { ordersAPI } from "../../services/api"; // Adjust path as necessary
 
 const OrdersManagement = () => {
   const [orders, setOrders] = useState([]);
