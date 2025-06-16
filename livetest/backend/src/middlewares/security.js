@@ -101,10 +101,12 @@ export const validateFileUpload = (allowedTypes = [], maxSize = 10 * 1024 * 1024
 // CORS configuration
 export const corsOptions = {
   origin: (origin, callback) => {
+    
     const allowedOrigins = [
       process.env.FRONTEND_URL,
       "http://localhost:3000",
       "http://localhost:5173",
+      "https://production-kappa.vercel.app",
       "http://127.0.0.1:5173",
     ].filter(Boolean)
 
