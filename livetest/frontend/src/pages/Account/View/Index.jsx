@@ -47,108 +47,7 @@ import {
   DeleteForever,
 } from "@mui/icons-material"
 import { useNavigate } from "react-router-dom"
-
-// Import sample product images
-import softChairsImage from "../../../assets/images/1.png"
-import sofaChairImage from "../../../assets/images/2.png"
-import kitchenDishesImage from "../../../assets/images/11.png"
-import smartWatchesImage from "../../../assets/images/8.png"
-
-// Mock data for orders - will be sorted by date
-const mockOrdersData = [
-  {
-    orderNo: "ORD-2023-001",
-    date: "2023-05-15",
-    image: softChairsImage,
-    productName: "Soft Chair",
-    itemCode: "SC001",
-    totalPaid: 80,
-    cashbackPercent: 5,
-    cashbackAmount: 4,
-    status: "Completed",
-    etimsInvNo: "INV-2023-001",
-  },
-  {
-    orderNo: "ORD-2023-002",
-    date: "2023-06-02",
-    image: sofaChairImage,
-    productName: "Sofa Chair",
-    itemCode: "SC002",
-    totalPaid: 150,
-    cashbackPercent: 3,
-    cashbackAmount: 5,
-    status: "Pending",
-    etimsInvNo: null,
-  },
-  {
-    orderNo: "ORD-2023-003",
-    date: "2023-06-10",
-    image: kitchenDishesImage,
-    productName: "Kitchen Dishes Set",
-    itemCode: "KD001",
-    totalPaid: 60,
-    cashbackPercent: 7,
-    cashbackAmount: 4,
-    status: "Completed",
-    etimsInvNo: "INV-2023-002",
-  },
-  {
-    orderNo: "ORD-2023-004",
-    date: "2023-06-18",
-    image: smartWatchesImage,
-    productName: "Smart Watch",
-    itemCode: "SW001",
-    totalPaid: 130,
-    cashbackPercent: 10,
-    cashbackAmount: 13,
-    status: "Pending",
-    etimsInvNo: null,
-  },
-]
-
-// Sort orders by date (newest first) and assign serial numbers
-const mockOrders = [...mockOrdersData]
-  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  .map((order, index) => ({
-    ...order,
-    serialNo: index + 1,
-  }))
-
-// Mock data for inbox messages
-const mockMessages = [
-  {
-    id: 1,
-    type: "order",
-    title: "Order Confirmation",
-    message: "Your order #ORD-2023-001 has been confirmed and is being processed.",
-    date: "2023-05-15",
-    read: true,
-  },
-  {
-    id: 2,
-    type: "support",
-    title: "Support Ticket #ST-001",
-    message: "Your support ticket regarding product return has been received. Our team will contact you shortly.",
-    date: "2023-06-05",
-    read: false,
-  },
-  {
-    id: 3,
-    type: "order",
-    title: "Order Shipped",
-    message: "Your order #ORD-2023-003 has been shipped. Expected delivery in 3-5 business days.",
-    date: "2023-06-12",
-    read: false,
-  },
-  {
-    id: 4,
-    type: "promotion",
-    title: "Special Offer",
-    message: "Enjoy 20% off on all kitchen appliances this weekend. Use code: KITCHEN20",
-    date: "2023-06-20",
-    read: true,
-  },
-]
+import { usersAPI, ordersAPI, authAPI, uploadAPI } from "../../../services/api"
 
 const AccountPage = () => {
   const theme = useTheme()
@@ -160,12 +59,24 @@ const AccountPage = () => {
 
   // State for user data
   const [userData, setUserData] = useState({
-    username: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+254 722 123 456",
-    address: "123 Main St, Nairobi, Kenya",
-    profilePicture: null,
+    id: "",
+    firstName: "", // from first_name
+    lastName: "", // from last_name
+    username: "", // from username
+    email: "", // from email
+    phone: "", // from phone_number
+    address: "", // from primary address in addresses array
+    profilePicture: null, // from profile_picture_url
+    addresses: [], // full addresses array
   })
+  const [profileLoading, setProfileLoading] = useState(true)
+  const [profileError, setProfileError] = useState(null)
+
+  // State for orders data
+  const [ordersData, setOrdersData] = useState([])
+  const [ordersLoading, setOrdersLoading] = useState(true)
+  const [ordersError, setOrdersError] = useState(null)
+
 
   // State for password change
   const [passwordData, setPasswordData] = useState({
@@ -183,16 +94,67 @@ const AccountPage = () => {
   // State for remove profile picture confirmation dialog
   const [removeProfileDialog, setRemoveProfileDialog] = useState(false)
 
-  // State for unread messages count
-  const [unreadCount, setUnreadCount] = useState(0)
-
   // State for success message
   const [successMessage, setSuccessMessage] = useState("")
+  const [errorMessage, setErrorMessage] = useState("")
 
-  // Calculate unread messages count
+
   useEffect(() => {
-    const count = mockMessages.filter((message) => !message.read).length
-    setUnreadCount(count)
+    const fetchAccountData = async () => {
+      setProfileLoading(true)
+      setOrdersLoading(true)
+      try {
+        // Fetch profile
+        const profileResponse = await usersAPI.getProfile()
+        if (profileResponse.data && profileResponse.data.success) {
+          const user = profileResponse.data.data.user
+          setUserData({
+            id: user.id,
+            firstName: user.first_name || "",
+            lastName: user.last_name || "",
+            username: user.username || `${user.first_name || ""} ${user.last_name || ""}`.trim(),
+            email: user.email || "",
+            phone: user.phone_number || "",
+            // Assuming addresses is an array and we take the first one as primary for simplicity
+            // A more robust solution would identify a 'primary' address if the backend provides such a flag
+            address: user.addresses && user.addresses.length > 0
+              ? `${user.addresses[0].street}, ${user.addresses[0].city}, ${user.addresses[0].postal_code}, ${user.addresses[0].country}`
+              : "No address provided",
+            profilePicture: user.profile_picture_url || null,
+            addresses: user.addresses || [],
+          })
+        } else {
+          setProfileError(profileResponse.data?.message || "Failed to load profile.")
+        }
+      } catch (err) {
+        setProfileError(err.response?.data?.message || err.message || "An error occurred while fetching profile.")
+      } finally {
+        setProfileLoading(false)
+      }
+
+      try {
+        // Fetch orders
+        const ordersResponse = await ordersAPI.getMyOrders() // Add params if needed e.g. { limit: 10, sortBy: 'order_date', sortOrder: 'DESC'}
+        if (ordersResponse.data && ordersResponse.data.success) {
+           // Sort orders by date (newest first) and assign serial numbers
+          const sortedOrders = (ordersResponse.data.data.orders || ordersResponse.data.orders || [])
+            .sort((a, b) => new Date(b.order_date).getTime() - new Date(a.order_date).getTime())
+            .map((order, index) => ({
+              ...order,
+              serialNo: index + 1,
+            }));
+          setOrdersData(sortedOrders)
+        } else {
+          setOrdersError(ordersResponse.data?.message || "Failed to load orders.")
+        }
+      } catch (err) {
+        setOrdersError(err.response?.data?.message || err.message || "An error occurred while fetching orders.")
+      } finally {
+        setOrdersLoading(false)
+      }
+    }
+
+    fetchAccountData()
   }, [])
 
   // Handle tab change
@@ -219,93 +181,188 @@ const AccountPage = () => {
   }
 
   // Handle profile picture change
-  const handleProfilePictureChange = (e) => {
+  const handleProfilePictureChange = async (e) => {
     if (e.target.files && e.target.files[0]) {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        setUserData({
-          ...userData,
-          profilePicture: e.target.result,
-        })
-        setProfilePictureDialog(false)
-        setSuccessMessage("Profile picture updated successfully!")
-        setTimeout(() => setSuccessMessage(""), 3000)
+      const file = e.target.files[0]
+      try {
+        setSuccessMessage("")
+        setErrorMessage("")
+        const response = await uploadAPI.uploadFile(file, "profile")
+        if (response.data && response.data.success) {
+          setUserData({
+            ...userData,
+            profilePicture: response.data.data.file_url,
+          })
+          setProfilePictureDialog(false)
+          setSuccessMessage("Profile picture updated successfully!")
+          // Optionally, call handleSaveProfile here if you want to persist the URL immediately
+          // await handleSaveProfile(response.data.data.file_url);
+        } else {
+          setErrorMessage(response.data?.message || "Failed to upload profile picture.")
+        }
+      } catch (error) {
+        setErrorMessage(error.response?.data?.message || error.message || "An error occurred while uploading.")
+      } finally {
+        setTimeout(() => {
+          setSuccessMessage("")
+          setErrorMessage("")
+        }, 5000)
       }
-      reader.readAsDataURL(e.target.files[0])
     }
   }
 
   // Handle remove profile picture
-  const handleRemoveProfilePicture = () => {
+  const handleRemoveProfilePicture = async () => {
+    // TODO: Implement backend call to remove profile picture if API exists.
+    // For now, just clearing locally and assuming save profile will handle it.
+    setSuccessMessage("")
+    setErrorMessage("")
     setUserData({
       ...userData,
       profilePicture: null,
     })
     setRemoveProfileDialog(false)
-    setSuccessMessage("Profile picture removed successfully!")
-    setTimeout(() => setSuccessMessage(""), 3000)
+    // Call save profile to persist null value for profile_picture_url
+    try {
+        const payload = {
+            first_name: userData.firstName,
+            last_name: userData.lastName,
+            username: userData.username,
+            email: userData.email, // Assuming email cannot be changed from here, or backend handles it
+            phone_number: userData.phone,
+            // addresses: userData.addresses, // Address update might be complex, handle separately if needed
+            profile_picture_url: null, // Explicitly setting to null
+          };
+        const response = await usersAPI.updateProfile(payload);
+        if (response.data && response.data.success) {
+            setSuccessMessage("Profile picture removed successfully!")
+        } else {
+            setErrorMessage(response.data?.message || "Failed to update profile on server.");
+        }
+    } catch (error) {
+        setErrorMessage(error.response?.data?.message || error.message || "An error occurred while updating profile.");
+    }
+     setTimeout(() => {
+        setSuccessMessage("")
+        setErrorMessage("")
+    }, 3000)
   }
 
   // Handle save profile
-  const handleSaveProfile = () => {
-    // In a real app, you would send the updated data to the server
-    setEditMode(false)
-    setSuccessMessage("Profile updated successfully!")
-    setTimeout(() => setSuccessMessage(""), 3000)
+  const handleSaveProfile = async (newProfilePictureUrl = undefined) => {
+    setSuccessMessage("")
+    setErrorMessage("")
+    try {
+      // Map frontend state to backend expected fields
+      const payload = {
+        first_name: userData.firstName,
+        last_name: userData.lastName,
+        username: userData.username,
+        email: userData.email, // Assuming email cannot be changed from here, or backend handles it
+        phone_number: userData.phone,
+        // addresses: userData.addresses, // Address update might be complex, handle separately if needed
+      }
+      if (newProfilePictureUrl !== undefined) {
+        payload.profile_picture_url = newProfilePictureUrl;
+      } else if (userData.profilePicture !== undefined) {
+        payload.profile_picture_url = userData.profilePicture;
+      }
+
+
+      const response = await usersAPI.updateProfile(payload)
+      if (response.data && response.data.success) {
+        setEditMode(false)
+        setSuccessMessage("Profile updated successfully!")
+        // Optionally re-fetch profile to get any server-side transformations
+        // const profileResponse = await usersAPI.getProfile(); ... setUserData(...)
+      } else {
+        setErrorMessage(response.data?.message || "Failed to update profile.")
+      }
+    } catch (error) {
+      setErrorMessage(error.response?.data?.message || error.message || "An error occurred while saving profile.")
+    }
+    setTimeout(() => {
+      setSuccessMessage("")
+      setErrorMessage("")
+    }, 3000)
   }
 
   // Handle password change
-  const handlePasswordChange = () => {
-    // Validate passwords
+  const handlePasswordChange = async () => {
+    setSuccessMessage("")
+    setErrorMessage("")
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert("New passwords do not match!")
+      setErrorMessage("New passwords do not match!")
+      setTimeout(() => setErrorMessage(""), 3000)
       return
     }
 
-    // In a real app, you would send the password change request to the server
-    setPasswordData({
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-    })
-    setSuccessMessage("Password changed successfully!")
-    setTimeout(() => setSuccessMessage(""), 3000)
+    try {
+      const response = await authAPI.updatePassword({
+        current_password: passwordData.currentPassword,
+        new_password: passwordData.newPassword,
+        // confirm_password: passwordData.confirmPassword, // usually not needed by backend if new_password is provided
+      })
+      if (response.data && response.data.success) {
+        setPasswordData({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        })
+        setSuccessMessage("Password changed successfully!")
+      } else {
+        setErrorMessage(response.data?.message || "Failed to change password.")
+      }
+    } catch (error) {
+      setErrorMessage(error.response?.data?.message || error.message || "An error occurred.")
+    }
+    setTimeout(() => {
+      setSuccessMessage("")
+      setErrorMessage("")
+    }, 3000)
   }
 
-  // Handle message read
-  const handleMessageRead = (id) => {
-    // Mark message as read
-    const updatedMessages = mockMessages.map((message) => (message.id === id ? { ...message, read: true } : message))
-    // In a real app, you would update this in the server/state management
-    setUnreadCount(updatedMessages.filter((message) => !message.read).length)
-  }
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* Success Message */}
       {successMessage && (
-        <Alert severity="success" sx={{ mb: 3 }}>
+        <Alert severity="success" sx={{ mb: 3, position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 1500, minWidth: '300px' }}>
           {successMessage}
+        </Alert>
+      )}
+       {errorMessage && (
+        <Alert severity="error" sx={{ mb: 3, position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 1500, minWidth: '300px' }}>
+          {errorMessage}
         </Alert>
       )}
 
       <Paper elevation={1} sx={{ p: { xs: 2, md: 3 }, borderRadius: 2, mb: 4 }}>
+        {profileLoading ? (
+          <Typography>Loading profile...</Typography>
+        ) : profileError ? (
+          <Alert severity="error">{profileError}</Alert>
+        ) : (
+        <>
         <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
           <Avatar
-            src={userData.profilePicture}
+            src={userData.profilePicture} // Uses profile_picture_url
             sx={{ width: 80, height: 80, mr: 2, bgcolor: theme.palette.primary.main }}
           >
-            {!userData.profilePicture && <Person fontSize="large" />}
+            {!userData.profilePicture && userData.username && <Person fontSize="large" />}
+             {!userData.profilePicture && !userData.username && <Person fontSize="large" />}
           </Avatar>
           <Box>
             <Typography variant="h5" component="h1" gutterBottom>
-              Hello, {userData.username}
+              Hello, {userData.username || `${userData.firstName} ${userData.lastName}`}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Welcome to your account dashboard
             </Typography>
           </Box>
         </Box>
+        </>
+        )}
 
         <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
           <Tabs
@@ -325,9 +382,43 @@ const AccountPage = () => {
             />
             <Tab
               icon={
-                <Badge badgeContent={unreadCount} color="error">
+                // <Badge badgeContent={unreadCount} color="error">
                   <Inbox />
-                </Badge>
+                // </Badge>
+              }
+              label="Inbox"
+              iconPosition="start"
+              sx={{ minHeight: 48, textTransform: "none" }}
+            />
+            <Tab
+              icon={<Settings />}
+            </Typography>
+          </Box>
+        </Box>
+        </>
+        )}
+
+        <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+          <Tabs
+            value={activeTab}
+            onChange={handleTabChange}
+            variant={isMobile ? "scrollable" : "fullWidth"}
+            scrollButtons={isMobile ? "auto" : false}
+            allowScrollButtonsMobile
+            aria-label="account tabs"
+          >
+            <Tab icon={<Person />} label="Profile" iconPosition="start" sx={{ minHeight: 48, textTransform: "none" }} />
+            <Tab
+              icon={<ShoppingBag />}
+              label="My Orders"
+              iconPosition="start"
+              sx={{ minHeight: 48, textTransform: "none" }}
+            />
+            <Tab
+              icon={
+                // <Badge badgeContent={unreadCount} color="error">
+                  <Inbox />
+                // </Badge>
               }
               label="Inbox"
               iconPosition="start"
@@ -345,6 +436,12 @@ const AccountPage = () => {
         {/* Profile Tab */}
         {activeTab === 0 && (
           <Box sx={{ py: 3 }}>
+          {profileLoading ? (
+            <Typography>Loading profile details...</Typography>
+          ) : profileError ? (
+            <Alert severity="error">{profileError}</Alert>
+          ) : (
+          <>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
               <Typography variant="h6" component="h2">
                 Account Information
@@ -372,7 +469,8 @@ const AccountPage = () => {
                       bgcolor: theme.palette.primary.main,
                     }}
                   >
-                    {!userData.profilePicture && <Person fontSize="large" />}
+                    {!userData.profilePicture && userData.username && <Person fontSize="large" />}
+                    {!userData.profilePicture && !userData.username && <Person fontSize="large" />}
                   </Avatar>
 
                   {/* Profile picture actions */}
@@ -405,11 +503,31 @@ const AccountPage = () => {
 
                 <TextField
                   fullWidth
+                  label="First Name"
+                  name="firstName"
+                  value={userData.firstName}
+                  onChange={handleUserDataChange}
+                  disabled={!editMode}
+                  margin="normal"
+                  variant="outlined"
+                />
+                <TextField
+                  fullWidth
+                  label="Last Name"
+                  name="lastName"
+                  value={userData.lastName}
+                  onChange={handleUserDataChange}
+                  disabled={!editMode}
+                  margin="normal"
+                  variant="outlined"
+                />
+                 <TextField
+                  fullWidth
                   label="Username"
                   name="username"
                   value={userData.username}
                   onChange={handleUserDataChange}
-                  disabled={!editMode}
+                  disabled={!editMode} // Username might not be editable or editable with restrictions
                   margin="normal"
                   variant="outlined"
                 />
@@ -421,9 +539,11 @@ const AccountPage = () => {
                   type="email"
                   value={userData.email}
                   onChange={handleUserDataChange}
-                  disabled={!editMode}
+                  disabled // Email is typically not editable directly by user
                   margin="normal"
                   variant="outlined"
+                  InputProps={{ readOnly: true }}
+                  helperText="Email cannot be changed."
                 />
 
                 <TextField
@@ -439,25 +559,28 @@ const AccountPage = () => {
 
                 <TextField
                   fullWidth
-                  label="Address"
+                  label="Address" // Displaying the first address for simplicity
                   name="address"
-                  value={userData.address}
-                  onChange={handleUserDataChange}
-                  disabled={!editMode}
+                  value={userData.address} // This should be derived from addresses array or a specific primary_address field
+                  onChange={handleUserDataChange} // Handling complex address updates needs more specific UI
+                  disabled={!editMode} // Or make a dedicated address management section
                   margin="normal"
                   variant="outlined"
                   multiline
                   rows={3}
+                  helperText="Primary address shown. For more address options, go to address book (if available)."
                 />
 
                 {editMode && (
-                  <Button variant="contained" color="primary" onClick={handleSaveProfile} sx={{ mt: 2 }} fullWidth>
+                  <Button variant="contained" color="primary" onClick={() => handleSaveProfile()} sx={{ mt: 2 }} fullWidth>
                     Save Changes
                   </Button>
                 )}
               </Grid>
 
               <Grid item xs={12} md={6}>
+              </>
+              )}
                 <Typography variant="h6" component="h3" gutterBottom>
                   Change Password
                 </Typography>
@@ -512,7 +635,11 @@ const AccountPage = () => {
             <Typography variant="h6" component="h2" gutterBottom>
               My Orders
             </Typography>
-            {mockOrders.length > 0 ? (
+            {ordersLoading ? (
+              <Typography>Loading orders...</Typography>
+            ) : ordersError ? (
+              <Alert severity="error">{ordersError}</Alert>
+            ) : ordersData.length > 0 ? (
               <TableContainer component={Paper} variant="outlined" sx={{ mt: 2 }}>
                 <Table sx={{ minWidth: 650 }}>
                   <TableHead>
@@ -520,6 +647,7 @@ const AccountPage = () => {
                       <TableCell>Serial No.</TableCell>
                       <TableCell>Order No.</TableCell>
                       <TableCell>Date</TableCell>
+                      <TableCell>Items</TableCell> {/* Display items instead of single product */}
                       <TableCell align="right">Total Paid</TableCell>
                       <TableCell align="center">Cashback</TableCell>
                       <TableCell align="center">Status</TableCell>
@@ -528,25 +656,39 @@ const AccountPage = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {mockOrders.map((order, index) => {
+                    {ordersData.map((order) => { // Use ordersData
                       return (
-                        <TableRow key={order.serialNo} hover>
+                        <TableRow key={order.id || order.serialNo} hover> {/* Use order.id from backend */}
                           <TableCell>{order.serialNo}</TableCell>
                           <TableCell>
                             <Button
                               variant="text"
                               color="primary"
-                              onClick={() => navigate(`/order-details/${order.orderNo}`)}
+                              onClick={() => navigate(`/order-details/${order.order_number || order.id}`)} // Use order_number or id
                               sx={{ textTransform: "none", padding: 0, minWidth: "auto" }}
                             >
-                              {order.orderNo}
+                              {order.order_number || order.id}
                             </Button>
                           </TableCell>
-                          <TableCell>{order.date}</TableCell>
-                          <TableCell align="right">{order.totalPaid}/=</TableCell>
+                          <TableCell>{new Date(order.order_date).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            {order.items && order.items.length > 0 ? (
+                              <ul style={{paddingLeft: 15, margin: 0}}>
+                                {order.items.slice(0, 2).map(item => ( // Show first 2 items
+                                  <li key={item.product_id || item.id}>
+                                    {item.product_name} (Qty: {item.quantity})
+                                    {order.items.length > 2 && index === 1 && "..."}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              "N/A"
+                            )}
+                          </TableCell>
+                          <TableCell align="right">{order.total_amount}/=</TableCell>
                           <TableCell align="center">
                             <Chip
-                              label={`${order.cashbackAmount}/=`}
+                              label={`${order.cashback_amount || 0}/=`} // Use cashback_amount
                               color="success"
                               size="small"
                               sx={{ fontSize: "0.7rem", height: "20px" }}
@@ -555,13 +697,13 @@ const AccountPage = () => {
                           <TableCell align="center">
                             <Chip
                               label={order.status}
-                              color={order.status === "Completed" ? "success" : "warning"}
+                              color={order.status === "COMPLETED" ? "success" : (order.status === "PENDING" ? "warning" : "default")}
                               size="small"
-                              icon={order.status === "Completed" ? <CheckCircle /> : <Schedule />}
+                              icon={order.status === "COMPLETED" ? <CheckCircle /> : <Schedule />}
                             />
                           </TableCell>
                           <TableCell align="center">
-                            {order.etimsInvNo || (
+                            {order.etims_invoice_number || ( // Use etims_invoice_number
                               <Chip
                                 label="Pending"
                                 size="small"
@@ -574,7 +716,7 @@ const AccountPage = () => {
                             <Button
                               size="small"
                               variant="outlined"
-                              onClick={() => navigate(`/order-details/${order.orderNo}`)}
+                              onClick={() => navigate(`/order-details/${order.order_number || order.id}`)}
                             >
                               View
                             </Button>
@@ -609,96 +751,17 @@ const AccountPage = () => {
               <Typography variant="h6" component="h2">
                 My Inbox
               </Typography>
-              <Badge badgeContent={unreadCount} color="error">
-                <Notifications />
-              </Badge>
+               <Notifications />
             </Box>
-
-            {mockMessages.length > 0 ? (
-              <List sx={{ width: "100%", bgcolor: "background.paper" }}>
-                {mockMessages.map((message) => (
-                  <React.Fragment key={message.id}>
-                    <ListItem
-                      alignItems="flex-start"
-                      sx={{
-                        bgcolor: message.read ? "transparent" : "rgba(25, 118, 210, 0.08)",
-                        borderRadius: 1,
-                      }}
-                    >
-                      <ListItemAvatar>
-                        <Avatar
-                          sx={{
-                            bgcolor:
-                              message.type === "order"
-                                ? "primary.main"
-                                : message.type === "support"
-                                  ? "secondary.main"
-                                  : "success.main",
-                          }}
-                        >
-                          {message.type === "order" ? (
-                            <ShoppingBag />
-                          ) : message.type === "support" ? (
-                            <Inbox />
-                          ) : (
-                            <Notifications />
-                          )}
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={
-                          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <Typography
-                              variant="subtitle1"
-                              component="span"
-                              sx={{ fontWeight: message.read ? "normal" : "bold" }}
-                            >
-                              {message.title}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {message.date}
-                            </Typography>
-                          </Box>
-                        }
-                        secondary={
-                          <React.Fragment>
-                            <Typography
-                              component="span"
-                              variant="body2"
-                              color="text.primary"
-                              sx={{ display: "block", mt: 1 }}
-                            >
-                              {message.message}
-                            </Typography>
-                            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 1 }}>
-                              {!message.read && (
-                                <Button size="small" onClick={() => handleMessageRead(message.id)} sx={{ mr: 1 }}>
-                                  Mark as Read
-                                </Button>
-                              )}
-                              <Button size="small" variant="outlined">
-                                View Details
-                              </Button>
-                            </Box>
-                          </React.Fragment>
-                        }
-                      />
-                    </ListItem>
-                    <Divider variant="inset" component="li" sx={{ my: 1 }} />
-                  </React.Fragment>
-                ))}
-              </List>
-            ) : (
-              <Box sx={{ textAlign: "center", py: 4 }}>
+            <Box sx={{ textAlign: "center", py: 4 }}>
                 <Inbox sx={{ fontSize: 60, color: "text.secondary", mb: 2 }} />
                 <Typography variant="h6" color="text.secondary" gutterBottom>
-                  Your Inbox is Empty
+                  Inbox Feature Not Available
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  You don't have any messages yet. Notifications about your orders and support tickets will appear here.
+                  This feature is currently under development. Please check back later.
                 </Typography>
               </Box>
-            )}
           </Box>
         )}
 

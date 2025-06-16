@@ -26,6 +26,7 @@ import SalesManagement from "../../../components/admin/SalesManagement"
 import SupplierManagement from "../../../components/admin/SupplierManagement"
 import SalesAgentAdminPanel from "../../../components/admin/SalesAgentAdminPanel"
 import CustomerManagement from "../../../components/admin/CustomerManagement" // Import CustomerManagement
+import OrdersManagement from "../../../components/admin/OrdersManagement" // Import OrdersManagement
 
 // Tab panel component for clean content rendering
 function TabPanel(props) {
@@ -463,23 +464,28 @@ const AdminPage = () => {
           <CategoryManagement categories={categories} onCategoriesChange={handleCategoriesChange} />
         </TabPanel>
 
-        {/* Sales - E-commerce Sales Management with CRUD */}
+        {/* Orders Management Tab */}
         <TabPanel value={tabValue} index={3}>
+          <OrdersManagement />
+        </TabPanel>
+
+        {/* Sales - E-commerce Sales Management with CRUD */}
+        <TabPanel value={tabValue} index={4}>
           <SalesManagement subTabValue={salesSubTabValue} onSubTabChange={handleSalesSubTabChange} />
         </TabPanel>
 
         {/* Inventory - E-commerce Stock Management with CRUD */}
-        <TabPanel value={tabValue} index={4}>
+        <TabPanel value={tabValue} index={5}>
           <GRNManagement />
         </TabPanel>
 
         {/* Suppliers - E-commerce Vendor Management with CRUD */}
-        <TabPanel value={tabValue} index={5}>
+        <TabPanel value={tabValue} index={6}>
           <SupplierManagement />
         </TabPanel>
 
         {/* Locations - E-commerce Location Management with CRUD */}
-        <TabPanel value={tabValue} index={6}>
+        <TabPanel value={tabValue} index={7}>
           <Paper sx={{ p: 4, textAlign: "center", borderRadius: 2 }}>
             <Typography variant="h6" color="text.secondary" gutterBottom sx={{ fontFamily: "'Poppins', sans-serif" }}>
               Location Management Portal with CRUD Operations
@@ -491,12 +497,12 @@ const AdminPage = () => {
         </TabPanel>
 
         {/* Sales Agents - E-commerce Team Management with CRUD */}
-        <TabPanel value={tabValue} index={7}>
+        <TabPanel value={tabValue} index={8}>
           <SalesAgentAdminPanel />
         </TabPanel>
 
         {/* Customer Management Tab */}
-        <TabPanel value={tabValue} index={8}>
+        <TabPanel value={tabValue} index={9}>
           <CustomerManagement />
         </TabPanel>
       </Box>

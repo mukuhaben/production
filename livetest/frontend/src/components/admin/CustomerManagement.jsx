@@ -47,78 +47,7 @@ import {
 } from "@mui/icons-material"
 import { Alert as MuiAlert } from "@mui/material" // Renamed to avoid conflict with alertInfo state
 import CircularProgress from "@mui/material/CircularProgress"; // for loading states
-
-
-// API service (consider moving to a dedicated services/api.js or customerService.js)
-// For now, placeholder functions. Replace with actual API calls.
-const apiClient = {
-  get: async (url) => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const token = localStorage.getItem("token"); // Assuming token is stored in localStorage
-    const response = await fetch(`/api${url}`, { // Prepending /api, adjust if your proxy is different
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-    });
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(errorData.message || `Request failed with status ${response.status}`);
-    }
-    return response.json();
-  },
-  post: async (url, data) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const token = localStorage.getItem("token");
-    const response = await fetch(`/api${url}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(errorData.message || `Request failed with status ${response.status}`);
-    }
-    return response.json();
-  },
-  patch: async (url, data) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const token = localStorage.getItem("token");
-    const response = await fetch(`/api${url}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
-    });
-     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(errorData.message || `Request failed with status ${response.status}`);
-    }
-    return response.json();
-  },
-  delete: async (url) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const token = localStorage.getItem("token");
-    const response = await fetch(`/api${url}`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-    });
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(errorData.message || `Request failed with status ${response.status}`);
-    }
-    return response.json();
-  },
-};
+import { usersAPI } from "../../../services/api"; // Import usersAPI
 
 
 // TabPanel Component for customer details tabs
@@ -171,18 +100,25 @@ const CustomerManagement = () => {
     setIsLoading(true)
     setAlertInfo({ open: false, message: "" });
     try {
-      // Use userType=customer to fetch only customers
-      const response = await apiClient.get("/users?userType=customer&limit=100&sortBy=created_at&sortOrder=DESC")
-      if (response.success && response.data && Array.isArray(response.data.users)) {
-        setCustomers(response.data.users)
-      } else {
+      const response = await usersAPI.getAll({ userType: "customer", limit: 100, sortBy: "created_at", sortOrder: "DESC" });
+      // Assuming usersAPI.getAll returns response in response.data directly
+      // and the actual user list is in response.data.data.users or response.data.users
+      // Based on api.js, axios response is response.data. The actual data structure from backend can vary.
+      // Let's assume the backend returns { success: true, data: { users: [...] } } or { success: true, users: [...] }
+      // The old code used response.data.users, so we'll stick to that if response.data exists.
+      if (response.data && response.data.success && response.data.data && Array.isArray(response.data.data.users)) {
+        setCustomers(response.data.data.users);
+      } else if (response.data && response.data.success && Array.isArray(response.data.users)) { // Fallback if users are directly under response.data
+        setCustomers(response.data.users);
+      }
+      else {
         setCustomers([])
-        setAlertInfo({ open: true, message: response.message || "Failed to fetch customers.", severity: "error" });
+        setAlertInfo({ open: true, message: response.data?.message || "Failed to fetch customers.", severity: "error" });
       }
     } catch (error) {
       console.error("Fetch customers error:", error)
       setCustomers([])
-      setAlertInfo({ open: true, message: error.message || "An error occurred while fetching customers.", severity: "error" });
+      setAlertInfo({ open: true, message: error.response?.data?.message || error.message || "An error occurred while fetching customers.", severity: "error" });
     } finally {
       setIsLoading(false)
     }
@@ -271,23 +207,23 @@ const CustomerManagement = () => {
 
     try {
       if (isAdd) { // Only handling add for now
-        const response = await apiClient.post("/users/register-customer", payload); // Target new specific endpoint
-        if (response.success) {
+        const response = await usersAPI.registerCustomer(payload);
+        if (response.data && response.data.success) {
           setAlertInfo({ open: true, message: "Customer added successfully!", severity: "success" });
           fetchCustomers(); // Refresh list
           handleCloseDialog();
         } else {
-          setAlertInfo({ open: true, message: response.message || "Failed to add customer.", severity: "error" });
+          setAlertInfo({ open: true, message: response.data?.message || "Failed to add customer.", severity: "error" });
         }
       } else {
-         // Update logic would go here, e.g. apiClient.put(`/users/${id}`, payload)
+         // Update logic would go here, e.g. usersAPI.update(id, payload)
          setAlertInfo({ open: true, message: "Update functionality not fully implemented in this step.", severity: "info" });
          // For now, just close dialog on "edit" attempt
          handleCloseDialog();
       }
     } catch (error) {
       console.error("Add/Update customer error:", error);
-      setAlertInfo({ open: true, message: error.message || "An error occurred.", severity: "error" });
+      setAlertInfo({ open: true, message: error.response?.data?.message || error.message || "An error occurred.", severity: "error" });
     }
   };
 
@@ -301,15 +237,15 @@ const CustomerManagement = () => {
     setAlertInfo({ open: false, message: "" });
 
     try {
-      const response = await apiClient.get(`/users/${customer.id}`);
-      if (response.success) {
-        setDetailedCustomerData(response.data.user);
+      const response = await usersAPI.getById(customer.id);
+      if (response.data && response.data.success) {
+        setDetailedCustomerData(response.data.data.user); // Assuming user is nested under data.user
       } else {
-        setAlertInfo({ open: true, message: response.message || "Failed to fetch customer details.", severity: "error" });
+        setAlertInfo({ open: true, message: response.data?.message || "Failed to fetch customer details.", severity: "error" });
       }
     } catch (error) {
       console.error("Fetch customer details error:", error);
-      setAlertInfo({ open: true, message: error.message || "An error occurred fetching details.", severity: "error" });
+      setAlertInfo({ open: true, message: error.response?.data?.message || error.message || "An error occurred fetching details.", severity: "error" });
     } finally {
       setIsDetailLoading(false);
     }
@@ -335,19 +271,16 @@ const CustomerManagement = () => {
     if (!customerToDelete) return;
     setAlertInfo({ open: false, message: "" });
     try {
-      // The users.js route for DELETE is /:id/deactivate which is a PATCH, not DELETE
-      // For a true delete, this would be `apiClient.delete(`/users/${customerToDelete.id}`)`
-      // Using deactivate for now as it exists.
-      const response = await apiClient.patch(`/users/${customerToDelete.id}/deactivate`, { reason: "Deactivated by admin from Customer Management" });
-      if (response.success) {
+      const response = await usersAPI.deactivateUser(customerToDelete.id, { reason: "Deactivated by admin from Customer Management" });
+      if (response.data && response.data.success) {
         setAlertInfo({ open: true, message: `Customer ${customerToDelete.first_name} deactivated successfully.`, severity: "success" });
         fetchCustomers(); // Refresh list
       } else {
-        setAlertInfo({ open: true, message: response.message || "Failed to deactivate customer.", severity: "error" });
+        setAlertInfo({ open: true, message: response.data?.message || "Failed to deactivate customer.", severity: "error" });
       }
     } catch (error) {
       console.error("Deactivate customer error:", error);
-      setAlertInfo({ open: true, message: error.message || "An error occurred.", severity: "error" });
+      setAlertInfo({ open: true, message: error.response?.data?.message || error.message || "An error occurred.", severity: "error" });
     } finally {
       handleCloseConfirmDeleteDialog();
     }
@@ -358,18 +291,29 @@ const CustomerManagement = () => {
     const newStatus = !customer.is_active;
     const action = newStatus ? "reactivate" : "deactivate";
     const actionPastTense = newStatus ? "reactivated" : "deactivated";
+    // No longer need a payload for reactivate, and reason is part of deactivateUser
+    // const payload = {
+    //   is_active: newStatus,
+    //   [newStatus ? 'reactivation_reason' : 'deactivation_reason']: `${actionPastTense} by admin from Customer Management panel`
+    // };
 
     try {
-      const response = await apiClient.patch(`/users/${customer.id}/${action}`, { reason: `${actionPastTense} by admin` });
-      if (response.success) {
+      let response;
+      if (newStatus) { // Reactivating
+        response = await usersAPI.reactivateUser(customer.id);
+      } else { // Deactivating
+        response = await usersAPI.deactivateUser(customer.id, { reason: `${actionPastTense} by admin from Customer Management panel` });
+      }
+
+      if (response.data && response.data.success) {
         setAlertInfo({ open: true, message: `Customer ${actionPastTense} successfully.`, severity: "success" });
         fetchCustomers(); // Refresh list
       } else {
-        setAlertInfo({ open: true, message: response.message || `Failed to ${action} customer.`, severity: "error" });
+        setAlertInfo({ open: true, message: response.data?.message || `Failed to ${action} customer.`, severity: "error" });
       }
     } catch (error) {
       console.error(`Toggle block customer error (${action}):`, error);
-      setAlertInfo({ open: true, message: error.message || "An error occurred.", severity: "error" });
+      setAlertInfo({ open: true, message: error.response?.data?.message || error.message || "An error occurred.", severity: "error" });
     }
   };
 
@@ -515,9 +459,9 @@ const CustomerManagement = () => {
             <TextField name="email" label="Email Address" type="email" value={customerFormData.email} onChange={handleFormInputChange} required sx={{ mb: 2 }} fullWidth/>
             <TextField name="phone" label="Phone Number" value={customerFormData.phone} onChange={handleFormInputChange} sx={{ mb: 2 }} fullWidth/>
             {isAdd && <TextField name="password" label="Password" type="password" value={customerFormData.password} onChange={handleFormInputChange} required sx={{ mb: 2 }} fullWidth/>}
-            <TextField name="isActive" select label="Status" value={customerFormData.isActive} onChange={(e) => setCustomerFormData(prev => ({...prev, isActive: e.target.value === 'true'}))} fullWidth sx={{ mb: 2 }}>
-              <MenuItem value="true">Active</MenuItem>
-              <MenuItem value="false">Inactive</MenuItem>
+            <TextField name="isActive" select label="Status" value={customerFormData.isActive} onChange={(e) => setCustomerFormData(prev => ({...prev, isActive: e.target.value === 'true'}))} SelectProps={{ native: true }}fullWidth sx={{ mb: 2 }}>
+              <option value="true">Active</option>
+              <option value="false">Inactive</option>
             </TextField>
           </Box>
         </DialogContent>
