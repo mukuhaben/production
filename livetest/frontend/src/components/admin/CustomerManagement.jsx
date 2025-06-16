@@ -47,7 +47,7 @@ import {
 } from "@mui/icons-material"
 import { Alert as MuiAlert } from "@mui/material" // Renamed to avoid conflict with alertInfo state
 import CircularProgress from "@mui/material/CircularProgress"; // for loading states
-import { usersAPI } from "../../../services/api"; // Import usersAPI
+import { usersAPI } from "../../services/api"; // Import usersAPI
 
 
 // TabPanel Component for customer details tabs
