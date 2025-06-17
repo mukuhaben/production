@@ -11,8 +11,10 @@ const app = express();
 // Swagger Docs
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
+
 app.use(morganMiddleware);
-app.use(cors());
+
+app.use(cors(corsOptions));
 app.use(urlencoded({ extended: true, limit: '150mb' }));
 app.use(json({ limit: '150mb' }));
 
