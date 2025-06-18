@@ -1,6 +1,8 @@
 import jwt from "jsonwebtoken"
 const { sign } = jwt
-import { hash } from "bcryptjs"
+import bcrypt from 'bcryptjs'; // ✅ Default import
+const { hash } = bcrypt;
+
 import db from "../database/models/index.js"
 
 class ProductController {
