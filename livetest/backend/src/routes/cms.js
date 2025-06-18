@@ -11,6 +11,8 @@ router.get("/navigation/:location", cmsController.getNavigationMenu)
 router.get("/banners/:type?", cmsController.getBanners)
 router.get("/featured-products/:section?", cmsController.getFeaturedProducts)
 router.get("/settings/public", cmsController.getPublicSettings)
+router.get('/navigation', cmsController.getNavigation)
+
 
 // Protected CMS endpoints (Admin only)
 router.use(authenticate)

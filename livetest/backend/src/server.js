@@ -79,6 +79,8 @@ app.use("/api/suppliers", supplierRoutes)
 app.use("/api/sales-agents", salesAgentRoutes)
 app.use("/api/users", userRoutes)
 app.use("/api/upload", uploadRoutes)
+app.use('/api/cms', cmsRoutes)
+
 
 // Handle undefined routes
 app.all("*", (req, res, next) => {
