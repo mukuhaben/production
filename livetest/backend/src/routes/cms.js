@@ -1,6 +1,8 @@
 import { Router } from "express"
 import { cmsController } from "../controllers/cmsController.js"
-import { authenticate, authorize } from "../middlewares/auth.js"
+
+import { verifyToken as authenticate, requireAdmin as authorize } from "../middlewares/auth.js";
+
 import { validateCMSContent } from "../middlewares/validation.js"
 
 const router = Router()
