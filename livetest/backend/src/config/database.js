@@ -28,6 +28,7 @@ const dbConfig = process.env.DATABASE_URL
 
 // Create connection pool
 const pool = new Pool(dbConfig);
+export const db = pool;
 
 // Test database connection
 export const testConnection = async () => {
