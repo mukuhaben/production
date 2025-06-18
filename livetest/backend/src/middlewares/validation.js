@@ -196,6 +196,7 @@ export const schemas = {
     password: Joi.string().min(6).required(),
     passwordConfirm: Joi.string().valid(Joi.ref("password")).required(),
   }),
+  
 
   // Profile update
   profileUpdate: Joi.object({

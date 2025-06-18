@@ -1,47 +1,34 @@
 import { Router } from "express"
-import { cmsController } from "../controllers/cmsController.js"
-
+import cmsController from "../controllers/cmsController.js"; 
 import { verifyToken as authenticate, requireAdmin as authorize } from "../middlewares/auth.js";
 import { validate, schemas } from "../middlewares/validation.js";
 
 
-const router = Router()
+const router = express.Router()
 
-// Public CMS endpoints
-router.get("/content/:type", cmsController.getContent)
-router.get("/navigation/:location", cmsController.getNavigationMenu)
-router.get("/banners/:type?", cmsController.getBanners)
-router.get("/featured-products/:section?", cmsController.getFeaturedProducts)
-router.get("/settings/public", cmsController.getPublicSettings)
-router.get('/navigation', cmsController.getNavigation)
+/* ----------  PUBLIC CMS ENDPOINTS ---------- */
+router.get("/navigation", cmsController.getNavigation);
+router.get("/content/:type", cmsController.getContent);
+router.get("/settings", cmsController.getSettings);
+router.get("/banners", cmsController.getBanners);
+router.get("/homepage", cmsController.getHomepageContent);
 
+/* ----------  PROTECTED (ADMIN) CMS ENDPOINTS ---------- */
+router.use(authenticate);          // JWT check
+router.use(authorize);             // must be admin
 
-// Protected CMS endpoints (Admin only)
-router.use(authenticate)
-router.use(authorize(["admin"]))
+router.post("/navigation", cmsController.updateNavigation);
 
-router.post("/content", validateCMSContent, cmsController.createContent)
-router.put("/content/:id", validateCMSContent, cmsController.updateContent)
-router.delete("/content/:id", cmsController.deleteContent)
+router.put("/content/:type", cmsController.updateContent);
 
-router.post("/navigation", cmsController.createNavigationMenu)
-router.put("/navigation/:id", cmsController.updateNavigationMenu)
-router.delete("/navigation/:id", cmsController.deleteNavigationMenu)
+router.put("/settings", cmsController.updateSettings);
 
-router.post("/banners", cmsController.createBanner)
-router.put("/banners/:id", cmsController.updateBanner)
-router.delete("/banners/:id", cmsController.deleteBanner)
+router.post("/banners", cmsController.createBanner);
+router.put("/banners/:id", cmsController.updateBanner);
+router.delete("/banners/:id", cmsController.deleteBanner);
 
-router.post("/featured-products", cmsController.createFeaturedProduct)
-router.put("/featured-products/:id", cmsController.updateFeaturedProduct)
-router.delete("/featured-products/:id", cmsController.deleteFeaturedProduct)
+router.put("/homepage", cmsController.updateHomepageContent);
 
-router.get("/settings", cmsController.getAllSettings)
-router.put("/settings", cmsController.updateSettings)
-
-// Media management
-router.post("/media/upload", cmsController.uploadMedia)
-router.get("/media", cmsController.getMedia)
-router.delete("/media/:id", cmsController.deleteMedia)
 
 export default router
+
