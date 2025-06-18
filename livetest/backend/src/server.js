@@ -7,9 +7,8 @@ import dotenv from "dotenv"
 
 // Load environment variables adjusted to tells Node to load .env.production when NODE_ENV=production
 dotenv.config({
-  path: `.env.${process.env.NODE_ENV || 'local'}`
+  path: `.env.${process.env.NODE_ENV || "local"}`,
 })
-
 
 // Import configurations and middlewares
 import { testConnection } from "./config/database.js"
@@ -102,10 +101,20 @@ const startServer = async () => {
     const server = app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`)
       console.log(`🌍 Environment: ${process.env.NODE_ENV}`)
-      console.log(`🔗 API Base URL: http://localhost:${PORT}/api`)
+
+      // Show correct API URL based on environment
+      const apiUrl =
+        process.env.NODE_ENV === "production"
+          ? `https://firstcraft-backend-q68n.onrender.com/api`
+          : `http://localhost:${PORT}/api`
+
+      console.log(`🔗 API Base URL: ${apiUrl}`)
 
       if (process.env.NODE_ENV === "development") {
         console.log(`📋 Health Check: http://localhost:${PORT}/health`)
+        console.log(`🎯 Frontend URL: ${process.env.FRONTEND_URL}`)
+      } else {
+        console.log(`📋 Health Check: https://firstcraft-backend-q68n.onrender.com/health`)
         console.log(`🎯 Frontend URL: ${process.env.FRONTEND_URL}`)
       }
     })
