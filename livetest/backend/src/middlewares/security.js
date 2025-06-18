@@ -98,27 +98,37 @@ export const validateFileUpload = (allowedTypes = [], maxSize = 10 * 1024 * 1024
   }
 }
 
-// CORS configuration
+
+// CORS configuration with enhanced security
 export const corsOptions = {
   origin: (origin, callback) => {
-    
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true)
+
     const allowedOrigins = [
-      process.env.FRONTEND_URL,
-      process.env.CORS_ORIGIN,
-      
+      "https://production-kappa.vercel.app",
+      "https://firstcrafttest-owfgqafzx3.vercel.app",
       "http://localhost:3000",
       "http://localhost:5173",
-      "https://production-kappa.vercel.app",
       "http://127.0.0.1:5173",
+      process.env.FRONTEND_URL,
+      ...(process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : []),
     ].filter(Boolean)
 
-    if (!origin || allowedOrigins.includes(origin)) {
+    console.log("🔍 CORS Check - Origin:", origin)
+    console.log("🔍 CORS Check - Allowed Origins:", allowedOrigins)
+
+    if (allowedOrigins.includes(origin)) {
+      console.log("✅ CORS - Origin allowed:", origin)
       callback(null, true)
     } else {
-      callback(new AppError("Not allowed by CORS", 403))
+      console.log("❌ CORS - Origin blocked:", origin)
+      callback(new Error("Not allowed by CORS"))
     }
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
+  exposedHeaders: ["X-Total-Count", "X-Page-Count"],
+  maxAge: 86400, // 24 hours preflight cache
 }

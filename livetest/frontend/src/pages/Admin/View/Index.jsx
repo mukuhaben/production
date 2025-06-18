@@ -26,7 +26,7 @@ import SalesManagement from "../../../components/admin/SalesManagement"
 import SupplierManagement from "../../../components/admin/SupplierManagement"
 import SalesAgentAdminPanel from "../../../components/admin/SalesAgentAdminPanel"
 import CustomerManagement from "../../../components/admin/CustomerManagement" // Import CustomerManagement
-import OrdersManagement from "../../../components/admin/OrdersManagement" // Import OrdersManagement
+// import OrdersManagement from "../../../components/admin/OrdersManagement" // Import OrdersManagement
 
 // Tab panel component for clean content rendering
 function TabPanel(props) {
@@ -200,6 +200,14 @@ const AdminPage = () => {
             message: "Opening Category creation form...",
             severity: "info",
           })
+        } else if (section === "orders") {
+          setTabValue(3) // Route to Sales tab
+          setSalesSubTabValue(1) // Assuming OrdersManagement is the first subtab
+          setCrudNotification({
+            open: true,
+            message: "Opening Orders Management...",
+            severity: "info",
+          })
         }
         // Add more create operations for other sections
         break
@@ -218,6 +226,14 @@ const AdminPage = () => {
           setCrudNotification({
             open: true,
             message: "Loading categories...",
+            severity: "info",
+          })
+        } else if (section === "orders") {
+          setTabValue(3) // Route to Sales tab
+          setSalesSubTabValue(1) // Assuming OrdersManagement is the first subtab
+          setCrudNotification({
+            open: true,
+            message: "Loading orders...",
             severity: "info",
           })
         }
@@ -464,28 +480,23 @@ const AdminPage = () => {
           <CategoryManagement categories={categories} onCategoriesChange={handleCategoriesChange} />
         </TabPanel>
 
-        {/* Orders Management Tab */}
-        <TabPanel value={tabValue} index={3}>
-          <OrdersManagement />
-        </TabPanel>
-
         {/* Sales - E-commerce Sales Management with CRUD */}
-        <TabPanel value={tabValue} index={4}>
+        <TabPanel value={tabValue} index={3}>
           <SalesManagement subTabValue={salesSubTabValue} onSubTabChange={handleSalesSubTabChange} />
         </TabPanel>
 
         {/* Inventory - E-commerce Stock Management with CRUD */}
-        <TabPanel value={tabValue} index={5}>
+        <TabPanel value={tabValue} index={4}>
           <GRNManagement />
         </TabPanel>
 
         {/* Suppliers - E-commerce Vendor Management with CRUD */}
-        <TabPanel value={tabValue} index={6}>
+        <TabPanel value={tabValue} index={5}>
           <SupplierManagement />
         </TabPanel>
 
         {/* Locations - E-commerce Location Management with CRUD */}
-        <TabPanel value={tabValue} index={7}>
+        <TabPanel value={tabValue} index={6}>
           <Paper sx={{ p: 4, textAlign: "center", borderRadius: 2 }}>
             <Typography variant="h6" color="text.secondary" gutterBottom sx={{ fontFamily: "'Poppins', sans-serif" }}>
               Location Management Portal with CRUD Operations
@@ -497,12 +508,12 @@ const AdminPage = () => {
         </TabPanel>
 
         {/* Sales Agents - E-commerce Team Management with CRUD */}
-        <TabPanel value={tabValue} index={8}>
+        <TabPanel value={tabValue} index={7}>
           <SalesAgentAdminPanel />
         </TabPanel>
 
         {/* Customer Management Tab */}
-        <TabPanel value={tabValue} index={9}>
+        <TabPanel value={tabValue} index={8}>
           <CustomerManagement />
         </TabPanel>
       </Box>

@@ -5,870 +5,715 @@ import {
   Box,
   Paper,
   Typography,
-  TextField,
-  Grid,
-  Button,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
+  Button,
+  Chip,
   IconButton,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Autocomplete,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
+  Grid,
+  Card,
+  CardContent,
+  TextField,
+  InputAdornment,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   Alert,
   Snackbar,
+  Tooltip,
+  Divider,
+  LinearProgress,
 } from "@mui/material"
-import { Add as AddIcon, Delete as DeleteIcon, Save as SaveIcon, Print as PrintIcon } from "@mui/icons-material"
+import {
+  Search as SearchIcon,
+  Visibility as ViewIcon,
+  Edit as EditIcon,
+  Email as EmailIcon,
+  Print as PrintIcon,
+  Add as AddIcon,
+  Business as SupplierIcon,
+  CheckCircle as CheckIcon,
+  Warning as WarningIcon,
+  Refresh as RefreshIcon,
+  GetApp as BatchIcon,
+  Timer as TimerIcon,
+} from "@mui/icons-material"
+import PurchaseOrderForm from "./PurchaseOrderForm"
 
-// Sample suppliers data
-const sampleSuppliers = [
-  {
-    id: 1,
-    name: "Afri Supplies Ltd",
-    contact: "John Kamau",
-    email: "info@afrisupplies.co.ke",
-    phone: "+254 722 123 456",
-    address: "Industrial Area, Nairobi",
-    city: "Nairobi",
-    region: "Nairobi",
-    country: "Kenya",
-    postalCode: "00100",
-  },
-  {
-    id: 2,
-    name: "KB Stationery Ltd",
-    contact: "Mary Wanjiku",
-    email: "sales@kbstationery.co.ke",
-    phone: "+254 733 987 654",
-    address: "Mombasa Road, Nairobi",
-    city: "Nairobi",
-    region: "Nairobi",
-    country: "Kenya",
-    postalCode: "00200",
-  },
-  {
-    id: 3,
-    name: "Grier Marousek",
-    contact: "Grier Marousek",
-    email: "gmarousek1d@google.ru",
-    phone: "414-149-2995",
-    address: "17 Northport Hill",
-    city: "Milwaukee",
-    region: "Wisconsin",
-    country: "United States",
-    postalCode: "53225",
-  },
-]
-
-// Sample products data
-const sampleProducts = [
-  {
-    code: "L0202004",
-    name: "Afri Multipurpose Labels K11 19*13mm White",
-    category: "General Stationery",
-    unitPrice: 50.0,
-    taxRate: 16,
-  },
-  {
-    code: "P0601005",
-    name: "Afri Packing Tape (Brown) 48mm*100Mtr",
-    category: "General Stationery",
-    unitPrice: 165.0,
-    taxRate: 16,
-  },
-  {
-    code: "C0201003",
-    name: "Counter Books KB A4 3 Quire REF 233",
-    category: "General Stationery",
-    unitPrice: 320.0,
-    taxRate: 16,
-  },
-]
-
-// Sample warehouses
-const warehouses = [
-  { id: 1, name: "Main Warehouse" },
-  { id: 2, name: "Westlands Branch" },
-  { id: 3, name: "Parklands Branch" },
-]
-
-/**
- * PurchaseOrderForm Component
- *
- * This component provides a form for creating and editing purchase orders.
- * It includes supplier selection, order details, and item management.
- *
- * @param {Object} props - Component props
- * @param {boolean} props.open - Controls dialog visibility
- * @param {Function} props.onClose - Function to call when closing the dialog
- * @param {Function} props.onSave - Function to call when saving the purchase order
- * @param {Object} props.editPO - Purchase order data for editing (optional)
- */
-const PurchaseOrderForm = ({ open, onClose, onSave, editPO = null }) => {
-  // State for purchase order data
-  const [purchaseOrder, setPurchaseOrder] = useState({
-    poNumber: generatePONumber(),
-    reference: "",
-    orderDate: new Date().toISOString().split("T")[0],
-    dueDate: new Date().toISOString().split("T")[0],
-    supplier: null,
-    warehouse: null,
-    taxSetting: "on",
-    discountSetting: "after-tax",
-    notes: "",
-    items: [
-      {
-        id: 1,
-        productCode: "",
-        productName: "",
-        quantity: 1,
-        rate: 0,
-        taxPercent: 16,
-        tax: 0,
-        discount: 0,
-        amount: 0,
-      },
-    ],
-    totals: {
-      subtotal: 0,
-      totalTax: 0,
-      totalDiscount: 0,
-      grandTotal: 0,
-    },
-  })
-
-  // State for notifications
+const PurchaseOrderManagement = () => {
+  // State management
+  const [purchaseOrders, setPurchaseOrders] = useState([])
+  const [filteredPOs, setFilteredPOs] = useState([])
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [selectedPO, setSelectedPO] = useState(null)
+  const [viewDialogOpen, setViewDialogOpen] = useState(false)
+  const [poFormOpen, setPOFormOpen] = useState(false)
+  const [editingPO, setEditingPO] = useState(null)
+  const [batchProcessing, setBatchProcessing] = useState(false)
   const [notification, setNotification] = useState({
     open: false,
     message: "",
     severity: "success",
   })
 
-  // State for supplier dialog
-  const [supplierDialogOpen, setSupplierDialogOpen] = useState(false)
-  const [newSupplier, setNewSupplier] = useState({
-    name: "",
-    contact: "",
-    email: "",
-    phone: "",
-    address: "",
-    city: "",
-    region: "",
-    country: "",
-    postalCode: "",
-  })
-
-  // Effect to populate form when editing
+  // Initialize sample PO data
   useEffect(() => {
-    if (editPO) {
-      setPurchaseOrder(editPO)
-    } else {
-      // Reset form for new PO
-      setPurchaseOrder({
-        poNumber: generatePONumber(),
-        reference: "",
-        orderDate: new Date().toISOString().split("T")[0],
-        dueDate: new Date().toISOString().split("T")[0],
-        supplier: null,
-        warehouse: null,
-        taxSetting: "on",
-        discountSetting: "after-tax",
-        notes: "",
+    const samplePOs = [
+      {
+        id: "PO001",
+        poNumber: "PO-2024-001",
+        supplier: {
+          id: 1,
+          name: "Afri Supplies Ltd",
+          contact: "John Kamau",
+          email: "info@afrisupplies.co.ke",
+          phone: "+254 722 123 456",
+          categories: ["General Stationery", "Office Supplies"],
+        },
         items: [
           {
             id: 1,
-            productCode: "",
-            productName: "",
-            quantity: 1,
-            rate: 0,
+            productCode: "L0202004",
+            productName: "Afri Multipurpose Labels K11 19*13mm White",
+            quantity: 100,
+            rate: 45.0,
             taxPercent: 16,
-            tax: 0,
-            discount: 0,
-            amount: 0,
+            tax: 720.0,
+            amount: 5220.0,
+          },
+          {
+            id: 2,
+            productCode: "P0601005",
+            productName: "Afri Packing Tape (Brown) 48mm*100Mtr",
+            quantity: 50,
+            rate: 160.0,
+            taxPercent: 16,
+            tax: 1280.0,
+            amount: 9280.0,
           },
         ],
+        orderDate: "2024-06-15",
+        dueDate: "2024-06-25",
+        status: "pending",
+        emailSent: true,
         totals: {
-          subtotal: 0,
-          totalTax: 0,
-          totalDiscount: 0,
-          grandTotal: 0,
+          subtotal: 12500.0,
+          totalTax: 2000.0,
+          grandTotal: 14500.0,
         },
-      })
-    }
-  }, [editPO, open])
-
-  // Effect to calculate totals when items change
-  useEffect(() => {
-    calculateTotals()
-  }, [purchaseOrder.items])
-
-  /**
-   * Generates a unique purchase order number
-   * @returns {string} Purchase order number
-   */
-  function generatePONumber() {
-    const prefix = "PO"
-    const timestamp = Date.now().toString().slice(-6)
-    const random = Math.floor(Math.random() * 1000)
-      .toString()
-      .padStart(3, "0")
-    return `${prefix}${timestamp}${random}`
-  }
-
-  /**
-   * Calculates totals for the purchase order
-   */
-  const calculateTotals = () => {
-    let subtotal = 0
-    let totalTax = 0
-    let totalDiscount = 0
-
-    // Calculate item values and update them
-    const updatedItems = purchaseOrder.items.map((item) => {
-      const itemSubtotal = item.quantity * item.rate
-      const itemTax = (itemSubtotal * item.taxPercent) / 100
-      const itemDiscount = item.discount || 0
-      const itemTotal = itemSubtotal + itemTax - itemDiscount
-
-      subtotal += itemSubtotal
-      totalTax += itemTax
-      totalDiscount += itemDiscount
-
-      return {
-        ...item,
-        tax: Number.parseFloat(itemTax.toFixed(2)),
-        amount: Number.parseFloat(itemTotal.toFixed(2)),
-      }
-    })
-
-    const grandTotal = subtotal + totalTax - totalDiscount
-
-    setPurchaseOrder((prev) => ({
-      ...prev,
-      items: updatedItems,
-      totals: {
-        subtotal: Number.parseFloat(subtotal.toFixed(2)),
-        totalTax: Number.parseFloat(totalTax.toFixed(2)),
-        totalDiscount: Number.parseFloat(totalDiscount.toFixed(2)),
-        grandTotal: Number.parseFloat(grandTotal.toFixed(2)),
+        createdAt: "2024-06-15T10:30:00Z",
+        notes: "Urgent order for restocking",
       },
-    }))
+      {
+        id: "PO002",
+        poNumber: "PO-2024-002",
+        supplier: {
+          id: 2,
+          name: "KB Stationery Ltd",
+          contact: "Mary Wanjiku",
+          email: "sales@kbstationery.co.ke",
+          phone: "+254 733 987 654",
+          categories: ["General Stationery", "Educational Supplies"],
+        },
+        items: [
+          {
+            id: 1,
+            productCode: "C0201003",
+            productName: "Counter Books KB A4 3 Quire REF 233",
+            quantity: 200,
+            rate: 300.0,
+            taxPercent: 16,
+            tax: 9600.0,
+            amount: 69600.0,
+          },
+        ],
+        orderDate: "2024-06-14",
+        dueDate: "2024-06-24",
+        status: "sent",
+        emailSent: true,
+        totals: {
+          subtotal: 60000.0,
+          totalTax: 9600.0,
+          grandTotal: 69600.0,
+        },
+        createdAt: "2024-06-14T14:15:00Z",
+        notes: "Bulk order for schools",
+      },
+      {
+        id: "PO003",
+        poNumber: "PO-2024-003",
+        supplier: {
+          id: 3,
+          name: "Office Solutions Kenya",
+          contact: "Peter Mwangi",
+          email: "orders@officesolutions.co.ke",
+          phone: "+254 711 456 789",
+          categories: ["Office Automation", "IT Accessories"],
+        },
+        items: [
+          {
+            id: 1,
+            productCode: "P0401001",
+            productName: "Petty Cash Voucher White A6 Ref 283",
+            quantity: 500,
+            rate: 35.0,
+            taxPercent: 16,
+            tax: 2800.0,
+            amount: 20300.0,
+          },
+        ],
+        orderDate: "2024-06-13",
+        dueDate: "2024-06-23",
+        status: "delivered",
+        emailSent: true,
+        totals: {
+          subtotal: 17500.0,
+          totalTax: 2800.0,
+          grandTotal: 20300.0,
+        },
+        createdAt: "2024-06-13T09:45:00Z",
+        notes: "Delivered on time",
+      },
+    ]
+
+    setPurchaseOrders(samplePOs)
+    setFilteredPOs(samplePOs)
+  }, [])
+
+  // Filter POs based on search term and status
+  useEffect(() => {
+    let filtered = purchaseOrders.filter(
+      (po) =>
+        po.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        po.supplier.name.toLowerCase().includes(searchTerm.toLowerCase()),
+    )
+
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((po) => po.status === statusFilter)
+    }
+
+    setFilteredPOs(filtered)
+  }, [purchaseOrders, searchTerm, statusFilter])
+
+  // Handle create new PO
+  const handleCreatePO = () => {
+    setEditingPO(null)
+    setPOFormOpen(true)
   }
 
-  /**
-   * Handles changes to purchase order fields
-   * @param {string} field - Field name
-   * @param {any} value - New value
-   */
-  const handlePOChange = (field, value) => {
-    setPurchaseOrder((prev) => ({
-      ...prev,
-      [field]: value,
-    }))
+  // Handle edit PO
+  const handleEditPO = (po) => {
+    setEditingPO(po)
+    setPOFormOpen(true)
   }
 
-  /**
-   * Handles changes to item fields
-   * @param {number} index - Item index
-   * @param {string} field - Field name
-   * @param {any} value - New value
-   */
-  const handleItemChange = (index, field, value) => {
-    const updatedItems = [...purchaseOrder.items]
+  // Handle view PO details
+  const handleViewPO = (po) => {
+    setSelectedPO(po)
+    setViewDialogOpen(true)
+  }
 
-    if (field === "productCode" && value) {
-      // Find product by code
-      const product = sampleProducts.find((p) => p.code === value)
-      if (product) {
-        updatedItems[index] = {
-          ...updatedItems[index],
-          productCode: product.code,
-          productName: product.name,
-          rate: product.unitPrice,
-          taxPercent: product.taxRate,
-        }
-      }
+  // Handle save PO
+  const handleSavePO = (poData) => {
+    if (editingPO) {
+      // Update existing PO
+      setPurchaseOrders((prev) => prev.map((po) => (po.id === editingPO.id ? { ...poData, id: editingPO.id } : po)))
+      showNotification("Purchase Order updated successfully", "success")
     } else {
-      updatedItems[index] = {
-        ...updatedItems[index],
-        [field]:
-          field === "quantity" || field === "rate" || field === "taxPercent" || field === "discount"
-            ? Number.parseFloat(value) || 0
-            : value,
+      // Create new PO
+      const newPO = {
+        ...poData,
+        id: `PO${Date.now()}`,
+        createdAt: new Date().toISOString(),
       }
+      setPurchaseOrders((prev) => [newPO, ...prev])
+      showNotification("Purchase Order created successfully", "success")
     }
-
-    setPurchaseOrder((prev) => ({
-      ...prev,
-      items: updatedItems,
-    }))
+    setPOFormOpen(false)
+    setEditingPO(null)
   }
 
-  /**
-   * Adds a new item to the purchase order
-   */
-  const addItem = () => {
-    const newItem = {
-      id: Date.now(),
-      productCode: "",
-      productName: "",
-      quantity: 1,
-      rate: 0,
-      taxPercent: 16,
-      tax: 0,
-      discount: 0,
-      amount: 0,
+  // Handle batch processing from customer orders
+  const handleBatchProcess = async () => {
+    setBatchProcessing(true)
+    try {
+      // Simulate batch processing
+      await new Promise((resolve) => setTimeout(resolve, 3000))
+
+      // This would normally fetch pending customer orders and group them by supplier
+      const newBatchPO = {
+        id: `PO${Date.now()}`,
+        poNumber: `PO-2024-${String(purchaseOrders.length + 1).padStart(3, "0")}`,
+        supplier: {
+          id: 4,
+          name: "Batch Supplier Ltd",
+          contact: "Auto Generated",
+          email: "batch@supplier.com",
+          phone: "+254 700 000 000",
+          categories: ["General Stationery"],
+        },
+        items: [
+          {
+            id: 1,
+            productCode: "BATCH001",
+            productName: "Batch Processed Item",
+            quantity: 25,
+            rate: 100.0,
+            taxPercent: 16,
+            tax: 400.0,
+            amount: 2900.0,
+          },
+        ],
+        orderDate: new Date().toISOString().split("T")[0],
+        dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+        status: "pending",
+        emailSent: false,
+        totals: {
+          subtotal: 2500.0,
+          totalTax: 400.0,
+          grandTotal: 2900.0,
+        },
+        createdAt: new Date().toISOString(),
+        notes: "Auto-generated from batch processing",
+      }
+
+      setPurchaseOrders((prev) => [newBatchPO, ...prev])
+      showNotification("Batch processing completed. New PO generated.", "success")
+    } catch (error) {
+      showNotification("Error during batch processing", "error")
+    } finally {
+      setBatchProcessing(false)
     }
-
-    setPurchaseOrder((prev) => ({
-      ...prev,
-      items: [...prev.items, newItem],
-    }))
   }
 
-  /**
-   * Removes an item from the purchase order
-   * @param {number} index - Item index
-   */
-  const removeItem = (index) => {
-    if (purchaseOrder.items.length > 1) {
-      const updatedItems = purchaseOrder.items.filter((_, i) => i !== index)
-      setPurchaseOrder((prev) => ({
-        ...prev,
-        items: updatedItems,
-      }))
-    }
-  }
-
-  /**
-   * Handles supplier dialog open
-   */
-  const handleOpenSupplierDialog = () => {
-    setSupplierDialogOpen(true)
-  }
-
-  /**
-   * Handles supplier dialog close
-   */
-  const handleCloseSupplierDialog = () => {
-    setSupplierDialogOpen(false)
-    setNewSupplier({
-      name: "",
-      contact: "",
-      email: "",
-      phone: "",
-      address: "",
-      city: "",
-      region: "",
-      country: "",
-      postalCode: "",
-    })
-  }
-
-  /**
-   * Handles new supplier form field changes
-   * @param {string} field - Field name
-   * @param {string} value - New value
-   */
-  const handleSupplierChange = (field, value) => {
-    setNewSupplier((prev) => ({
-      ...prev,
-      [field]: value,
-    }))
-  }
-
-  /**
-   * Handles saving a new supplier
-   */
-  const handleSaveSupplier = () => {
-    // In a real app, this would save to a database
-    // For now, we'll just close the dialog and show a notification
+  // Show notification
+  const showNotification = (message, severity = "success") => {
     setNotification({
       open: true,
-      message: "Supplier added successfully!",
-      severity: "success",
-    })
-    handleCloseSupplierDialog()
-  }
-
-  /**
-   * Handles saving the purchase order
-   */
-  const handleSave = () => {
-    if (!purchaseOrder.supplier) {
-      setNotification({
-        open: true,
-        message: "Please select a supplier",
-        severity: "error",
-      })
-      return
-    }
-
-    if (!purchaseOrder.warehouse) {
-      setNotification({
-        open: true,
-        message: "Please select a warehouse",
-        severity: "error",
-      })
-      return
-    }
-
-    if (purchaseOrder.items.some((item) => !item.productCode)) {
-      setNotification({
-        open: true,
-        message: "Please fill in all product details",
-        severity: "error",
-      })
-      return
-    }
-
-    // Call the onSave function with the purchase order data
-    onSave({
-      ...purchaseOrder,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    })
-
-    onClose()
-  }
-
-  /**
-   * Handles notification close
-   */
-  const handleNotificationClose = () => {
-    setNotification({
-      ...notification,
-      open: false,
+      message,
+      severity,
     })
   }
 
-  /**
-   * Formats currency values
-   * @param {number} amount - Amount to format
-   * @returns {string} Formatted amount
-   */
+  // Format currency
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-KE", {
       style: "currency",
       currency: "KES",
-      minimumFractionDigits: 2,
     }).format(amount)
   }
 
+  // Get status color
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "pending":
+        return "warning"
+      case "sent":
+        return "info"
+      case "delivered":
+        return "success"
+      case "cancelled":
+        return "error"
+      default:
+        return "default"
+    }
+  }
+
   return (
-    <>
-      <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
-        <DialogTitle>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <Typography variant="h6">{editPO ? "Edit Purchase Order" : "Create Purchase Order"}</Typography>
-            <Button variant="outlined" startIcon={<PrintIcon />}>
-              Print Preview
+    <Box sx={{ width: "100%", bgcolor: "#f8fafc", minHeight: "100vh", p: 3 }}>
+      {/* Header */}
+      <Paper sx={{ mb: 3, p: 3, borderRadius: 2 }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+          <Typography variant="h5" sx={{ fontWeight: 600, color: "#1976d2" }}>
+            Purchase Order Management
+          </Typography>
+          <Box sx={{ display: "flex", gap: 2 }}>
+            <Button
+              variant="contained"
+              startIcon={<BatchIcon />}
+              onClick={handleBatchProcess}
+              disabled={batchProcessing}
+              sx={{ bgcolor: "#1976d2" }}
+            >
+              {batchProcessing ? "Processing..." : "Batch Process"}
             </Button>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreatePO} sx={{ bgcolor: "#1976d2" }}>
+              Create PO
+            </Button>
+            <Button variant="outlined" startIcon={<RefreshIcon />}>
+              Refresh
+            </Button>
+          </Box>
+        </Box>
+
+        {/* Batch Processing Progress */}
+        {batchProcessing && (
+          <Box sx={{ mb: 2 }}>
+            <Alert severity="info" sx={{ mb: 1 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <TimerIcon />
+                Processing customer orders and generating purchase orders...
+              </Box>
+            </Alert>
+            <LinearProgress />
+          </Box>
+        )}
+
+        {/* Summary Cards */}
+        <Grid container spacing={3} sx={{ mb: 3 }}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ bgcolor: "#e3f2fd", border: "1px solid #bbdefb" }}>
+              <CardContent sx={{ textAlign: "center", py: 2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 600, color: "#1976d2" }}>
+                  {purchaseOrders.length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Total POs
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ bgcolor: "#fff3e0", border: "1px solid #ffcc02" }}>
+              <CardContent sx={{ textAlign: "center", py: 2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 600, color: "#f57c00" }}>
+                  {purchaseOrders.filter((po) => po.status === "pending").length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Pending
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ bgcolor: "#e1f5fe", border: "1px solid #b3e5fc" }}>
+              <CardContent sx={{ textAlign: "center", py: 2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 600, color: "#0288d1" }}>
+                  {purchaseOrders.filter((po) => po.status === "sent").length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Sent
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ bgcolor: "#e8f5e8", border: "1px solid #c8e6c9" }}>
+              <CardContent sx={{ textAlign: "center", py: 2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 600, color: "#388e3c" }}>
+                  {purchaseOrders.filter((po) => po.status === "delivered").length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Delivered
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Search and Filter */}
+        <Box sx={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
+          <TextField
+            size="small"
+            placeholder="Search POs..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ minWidth: 300 }}
+          />
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel>Status Filter</InputLabel>
+            <Select value={statusFilter} label="Status Filter" onChange={(e) => setStatusFilter(e.target.value)}>
+              <MenuItem value="all">All Status</MenuItem>
+              <MenuItem value="pending">Pending</MenuItem>
+              <MenuItem value="sent">Sent</MenuItem>
+              <MenuItem value="delivered">Delivered</MenuItem>
+              <MenuItem value="cancelled">Cancelled</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
+      </Paper>
+
+      {/* Purchase Orders Table */}
+      <Paper sx={{ borderRadius: 2 }}>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ bgcolor: "#f5f5f5" }}>
+                <TableCell sx={{ fontWeight: 600 }}>PO Number</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Supplier</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Items</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Total Value</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Created</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredPOs.map((po) => (
+                <TableRow key={po.id} hover>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontFamily: "monospace" }}>
+                      {po.poNumber}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <SupplierIcon color="primary" />
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {po.supplier.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {po.supplier.contact}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Chip label={`${po.items.length} items`} size="small" color="primary" />
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(po.totals.grandTotal)}</TableCell>
+                  <TableCell>
+                    <Chip label={po.status.toUpperCase()} color={getStatusColor(po.status)} size="small" />
+                  </TableCell>
+                  <TableCell>
+                    {new Date(po.createdAt).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "2-digit",
+                    })}
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      <Tooltip title="View Details">
+                        <IconButton size="small" onClick={() => handleViewPO(po)}>
+                          <ViewIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Edit PO">
+                        <IconButton size="small" onClick={() => handleEditPO(po)}>
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Send Email">
+                        <IconButton size="small" color="primary">
+                          <EmailIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Print PO">
+                        <IconButton size="small" color="secondary">
+                          <PrintIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
+
+      {/* PO Details Dialog */}
+      <Dialog open={viewDialogOpen} onClose={() => setViewDialogOpen(false)} maxWidth="lg" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <SupplierIcon />
+            <Box>
+              <Typography variant="h6">Purchase Order Details</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {selectedPO?.poNumber}
+              </Typography>
+            </Box>
           </Box>
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            {/* Supplier and Reference Section */}
-            <Grid container spacing={3} sx={{ mb: 3 }}>
-              <Grid item xs={12} md={6}>
-                <Paper sx={{ p: 3, height: "100%" }}>
-                  <Typography variant="h6" sx={{ mb: 2, color: "#1976d2" }}>
-                    Bill From
-                  </Typography>
-                  <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                    <Autocomplete
-                      options={sampleSuppliers}
-                      getOptionLabel={(option) => option.name}
-                      value={purchaseOrder.supplier}
-                      onChange={(event, newValue) => {
-                        handlePOChange("supplier", newValue)
-                      }}
-                      renderInput={(params) => <TextField {...params} label="Search Supplier" fullWidth />}
-                      sx={{ flexGrow: 1, mr: 1 }}
-                    />
-                    <Button variant="contained" size="small" onClick={handleOpenSupplierDialog}>
-                      Add Supplier
-                    </Button>
-                  </Box>
-
-                  {purchaseOrder.supplier && (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="body2" sx={{ mb: 0.5 }}>
-                        <strong>Contact:</strong> {purchaseOrder.supplier.contact}
+          {selectedPO && (
+            <Box>
+              {/* PO Header Information */}
+              <Grid container spacing={3} sx={{ mb: 3 }}>
+                <Grid item xs={12} md={6}>
+                  <Paper sx={{ p: 3 }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: "#1976d2" }}>
+                      Supplier Information
+                    </Typography>
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                      <Typography>
+                        <strong>Name:</strong> {selectedPO.supplier.name}
                       </Typography>
-                      <Typography variant="body2" sx={{ mb: 0.5 }}>
-                        <strong>Email:</strong> {purchaseOrder.supplier.email}
+                      <Typography>
+                        <strong>Contact:</strong> {selectedPO.supplier.contact}
                       </Typography>
-                      <Typography variant="body2" sx={{ mb: 0.5 }}>
-                        <strong>Phone:</strong> {purchaseOrder.supplier.phone}
+                      <Typography>
+                        <strong>Email:</strong> {selectedPO.supplier.email}
                       </Typography>
-                      <Typography variant="body2" sx={{ mb: 0.5 }}>
-                        <strong>Address:</strong> {purchaseOrder.supplier.address}
+                      <Typography>
+                        <strong>Phone:</strong> {selectedPO.supplier.phone}
                       </Typography>
                     </Box>
-                  )}
-                </Paper>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Paper sx={{ p: 3 }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: "#1976d2" }}>
+                      Order Information
+                    </Typography>
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                      <Typography>
+                        <strong>Order Date:</strong> {new Date(selectedPO.orderDate).toLocaleDateString()}
+                      </Typography>
+                      <Typography>
+                        <strong>Due Date:</strong> {new Date(selectedPO.dueDate).toLocaleDateString()}
+                      </Typography>
+                      <Typography>
+                        <strong>Status:</strong>{" "}
+                        <Chip
+                          label={selectedPO.status.toUpperCase()}
+                          color={getStatusColor(selectedPO.status)}
+                          size="small"
+                        />
+                      </Typography>
+                      <Typography>
+                        <strong>Email Sent:</strong>{" "}
+                        <Chip
+                          icon={selectedPO.emailSent ? <CheckIcon /> : <WarningIcon />}
+                          label={selectedPO.emailSent ? "Yes" : "No"}
+                          color={selectedPO.emailSent ? "success" : "warning"}
+                          size="small"
+                        />
+                      </Typography>
+                    </Box>
+                  </Paper>
+                </Grid>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <Paper sx={{ p: 3, height: "100%" }}>
-                  <Typography variant="h6" sx={{ mb: 2, color: "#1976d2" }}>
-                    Purchase Order
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    label="PO Number"
-                    value={purchaseOrder.poNumber}
-                    onChange={(e) => handlePOChange("poNumber", e.target.value)}
-                    sx={{ mb: 2 }}
-                  />
-                  <TextField
-                    fullWidth
-                    label="Reference"
-                    value={purchaseOrder.reference}
-                    onChange={(e) => handlePOChange("reference", e.target.value)}
-                    sx={{ mb: 2 }}
-                  />
-                  <Grid container spacing={2}>
-                    <Grid item xs={6}>
-                      <TextField
-                        fullWidth
-                        label="Order Date"
-                        type="date"
-                        value={purchaseOrder.orderDate}
-                        onChange={(e) => handlePOChange("orderDate", e.target.value)}
-                        InputLabelProps={{ shrink: true }}
-                      />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <TextField
-                        fullWidth
-                        label="Due Date"
-                        type="date"
-                        value={purchaseOrder.dueDate}
-                        onChange={(e) => handlePOChange("dueDate", e.target.value)}
-                        InputLabelProps={{ shrink: true }}
-                      />
-                    </Grid>
-                  </Grid>
-                </Paper>
-              </Grid>
-            </Grid>
 
-            {/* Warehouse and Tax Settings */}
-            <Grid container spacing={3} sx={{ mb: 3 }}>
-              <Grid item xs={12} md={4}>
-                <FormControl fullWidth>
-                  <InputLabel>Warehouse</InputLabel>
-                  <Select
-                    value={purchaseOrder.warehouse || ""}
-                    label="Warehouse"
-                    onChange={(e) => {
-                      const selectedWarehouse = warehouses.find((w) => w.id === e.target.value)
-                      handlePOChange("warehouse", selectedWarehouse)
-                    }}
-                  >
-                    {warehouses.map((warehouse) => (
-                      <MenuItem key={warehouse.id} value={warehouse.id}>
-                        {warehouse.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <FormControl fullWidth>
-                  <InputLabel>Tax</InputLabel>
-                  <Select
-                    value={purchaseOrder.taxSetting}
-                    label="Tax"
-                    onChange={(e) => handlePOChange("taxSetting", e.target.value)}
-                  >
-                    <MenuItem value="on">On</MenuItem>
-                    <MenuItem value="off">Off</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <FormControl fullWidth>
-                  <InputLabel>Discount</InputLabel>
-                  <Select
-                    value={purchaseOrder.discountSetting}
-                    label="Discount"
-                    onChange={(e) => handlePOChange("discountSetting", e.target.value)}
-                  >
-                    <MenuItem value="before-tax">% Discount Before Tax</MenuItem>
-                    <MenuItem value="after-tax">% Discount After Tax</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-            </Grid>
-
-            {/* Notes */}
-            <Paper sx={{ p: 3, mb: 3 }}>
-              <TextField
-                fullWidth
-                label="Notes"
-                multiline
-                rows={3}
-                value={purchaseOrder.notes}
-                onChange={(e) => handlePOChange("notes", e.target.value)}
-              />
-            </Paper>
-
-            {/* Items Section */}
-            <Paper sx={{ mb: 3, p: 3 }}>
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-                <Typography variant="h6" sx={{ color: "#1976d2" }}>
-                  Order Items
+              {/* PO Items */}
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h6" sx={{ mb: 2, color: "#1976d2" }}>
+                  Purchase Order Items
                 </Typography>
-                <Button variant="contained" startIcon={<AddIcon />} onClick={addItem}>
-                  Add Item
-                </Button>
-              </Box>
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: "#f5f5f5" }}>
-                      <TableCell width="30%">Item Name</TableCell>
-                      <TableCell width="10%">Quantity</TableCell>
-                      <TableCell width="15%">Rate</TableCell>
-                      <TableCell width="10%">Tax(%)</TableCell>
-                      <TableCell width="10%">Tax</TableCell>
-                      <TableCell width="10%">Discount</TableCell>
-                      <TableCell width="10%">Amount</TableCell>
-                      <TableCell width="5%">Action</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {purchaseOrder.items.map((item, index) => (
-                      <TableRow key={item.id}>
-                        <TableCell>
-                          <Autocomplete
-                            options={sampleProducts}
-                            getOptionLabel={(option) => `${option.code} - ${option.name}`}
-                            onChange={(event, value) => {
-                              if (value) {
-                                handleItemChange(index, "productCode", value.code)
-                              }
-                            }}
-                            renderInput={(params) => <TextField {...params} label="Select Product" size="small" />}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            size="small"
-                            type="number"
-                            value={item.quantity}
-                            onChange={(e) => handleItemChange(index, "quantity", e.target.value)}
-                            inputProps={{ min: 1, step: 1 }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            size="small"
-                            type="number"
-                            value={item.rate}
-                            onChange={(e) => handleItemChange(index, "rate", e.target.value)}
-                            inputProps={{ min: 0, step: 0.01 }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            size="small"
-                            type="number"
-                            value={item.taxPercent}
-                            onChange={(e) => handleItemChange(index, "taxPercent", e.target.value)}
-                            inputProps={{ min: 0, max: 100, step: 1 }}
-                          />
-                        </TableCell>
-                        <TableCell>{formatCurrency(item.tax)}</TableCell>
-                        <TableCell>
-                          <TextField
-                            size="small"
-                            type="number"
-                            value={item.discount}
-                            onChange={(e) => handleItemChange(index, "discount", e.target.value)}
-                            inputProps={{ min: 0, step: 0.01 }}
-                          />
-                        </TableCell>
-                        <TableCell>{formatCurrency(item.amount)}</TableCell>
-                        <TableCell>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => removeItem(index)}
-                            disabled={purchaseOrder.items.length === 1}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </TableCell>
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: "#f5f5f5" }}>
+                        <TableCell>Product Code</TableCell>
+                        <TableCell>Product Name</TableCell>
+                        <TableCell>Quantity</TableCell>
+                        <TableCell>Rate</TableCell>
+                        <TableCell>Tax %</TableCell>
+                        <TableCell>Tax Amount</TableCell>
+                        <TableCell>Total Amount</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
+                    </TableHead>
+                    <TableBody>
+                      {selectedPO.items.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell sx={{ fontFamily: "monospace" }}>{item.productCode}</TableCell>
+                          <TableCell>{item.productName}</TableCell>
+                          <TableCell>{item.quantity}</TableCell>
+                          <TableCell>{formatCurrency(item.rate)}</TableCell>
+                          <TableCell>{item.taxPercent}%</TableCell>
+                          <TableCell>{formatCurrency(item.tax)}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(item.amount)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
 
-            {/* Totals Section */}
-            <Grid container justifyContent="flex-end">
-              <Grid item xs={12} md={6}>
-                <Paper sx={{ p: 3 }}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={6}>
-                      <Typography variant="body1">Subtotal:</Typography>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Typography variant="body1" align="right">
-                        {formatCurrency(purchaseOrder.totals.subtotal)}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Typography variant="body1">Tax:</Typography>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Typography variant="body1" align="right">
-                        {formatCurrency(purchaseOrder.totals.totalTax)}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Typography variant="body1">Discount:</Typography>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Typography variant="body1" align="right">
-                        {formatCurrency(purchaseOrder.totals.totalDiscount)}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Typography variant="h6">Grand Total:</Typography>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Typography variant="h6" align="right">
-                        {formatCurrency(purchaseOrder.totals.grandTotal)}
-                      </Typography>
-                    </Grid>
-                  </Grid>
-                </Paper>
-              </Grid>
-            </Grid>
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button variant="contained" startIcon={<SaveIcon />} onClick={handleSave}>
-            {editPO ? "Update" : "Save"} Purchase Order
-          </Button>
-        </DialogActions>
-      </Dialog>
+                <Divider sx={{ my: 2 }} />
 
-      {/* Add Supplier Dialog */}
-      <Dialog open={supplierDialogOpen} onClose={handleCloseSupplierDialog} maxWidth="md" fullWidth>
-        <DialogTitle>Add New Supplier</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Supplier Name"
-                value={newSupplier.name}
-                onChange={(e) => handleSupplierChange("name", e.target.value)}
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                label="Contact Person"
-                value={newSupplier.contact}
-                onChange={(e) => handleSupplierChange("contact", e.target.value)}
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                label="Email"
-                type="email"
-                value={newSupplier.email}
-                onChange={(e) => handleSupplierChange("email", e.target.value)}
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                label="Phone"
-                value={newSupplier.phone}
-                onChange={(e) => handleSupplierChange("phone", e.target.value)}
-                sx={{ mb: 2 }}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Address"
-                value={newSupplier.address}
-                onChange={(e) => handleSupplierChange("address", e.target.value)}
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                label="City"
-                value={newSupplier.city}
-                onChange={(e) => handleSupplierChange("city", e.target.value)}
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                label="Region/State"
-                value={newSupplier.region}
-                onChange={(e) => handleSupplierChange("region", e.target.value)}
-                sx={{ mb: 2 }}
-              />
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <TextField
-                    fullWidth
-                    label="Country"
-                    value={newSupplier.country}
-                    onChange={(e) => handleSupplierChange("country", e.target.value)}
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <TextField
-                    fullWidth
-                    label="Postal Code"
-                    value={newSupplier.postalCode}
-                    onChange={(e) => handleSupplierChange("postalCode", e.target.value)}
-                  />
-                </Grid>
-              </Grid>
-            </Grid>
-          </Grid>
+                {/* Totals */}
+                <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                  <Box sx={{ minWidth: 300 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                      <Typography>Subtotal:</Typography>
+                      <Typography>{formatCurrency(selectedPO.totals.subtotal)}</Typography>
+                    </Box>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                      <Typography>Total Tax:</Typography>
+                      <Typography>{formatCurrency(selectedPO.totals.totalTax)}</Typography>
+                    </Box>
+                    <Divider sx={{ my: 1 }} />
+                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                        Grand Total:
+                      </Typography>
+                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                        {formatCurrency(selectedPO.totals.grandTotal)}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+
+                {selectedPO.notes && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="body2">
+                      <strong>Notes:</strong> {selectedPO.notes}
+                    </Typography>
+                  </Box>
+                )}
+              </Paper>
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseSupplierDialog}>Cancel</Button>
-          <Button variant="contained" onClick={handleSaveSupplier}>
-            Save Supplier
+          <Button onClick={() => setViewDialogOpen(false)}>Close</Button>
+          <Button variant="outlined" startIcon={<PrintIcon />}>
+            Print
+          </Button>
+          <Button variant="contained" startIcon={<EmailIcon />}>
+            Send Email
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Notifications */}
+      {/* PO Form Dialog */}
+      <Dialog open={poFormOpen} onClose={() => setPOFormOpen(false)} maxWidth="lg" fullWidth>
+        <PurchaseOrderForm
+          po={editingPO}
+          onSave={handleSavePO}
+          onCancel={() => {
+            setPOFormOpen(false)
+            setEditingPO(null)
+          }}
+        />
+      </Dialog>
+
+      {/* Notification Snackbar */}
       <Snackbar
         open={notification.open}
         autoHideDuration={6000}
-        onClose={handleNotificationClose}
+        onClose={() => setNotification({ ...notification, open: false })}
         anchorOrigin={{ vertical: "top", horizontal: "right" }}
       >
-        <Alert onClose={handleNotificationClose} severity={notification.severity} sx={{ width: "100%" }}>
+        <Alert
+          onClose={() => setNotification({ ...notification, open: false })}
+          severity={notification.severity}
+          sx={{ width: "100%" }}
+        >
           {notification.message}
         </Alert>
       </Snackbar>
-    </>
+    </Box>
   )
 }
 
-export default PurchaseOrderForm
+export default PurchaseOrderManagement

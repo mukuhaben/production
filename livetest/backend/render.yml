@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: firstcraft-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm run start:production
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: FRONTEND_URL
+        value: https://production-kappa.vercel.app
+      - key: API_BASE_URL
+        value: https://production-kappa.vercel.app
+      - key: CORS_ORIGIN
+        value: https://production-kappa.vercel.app
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: /api/$1

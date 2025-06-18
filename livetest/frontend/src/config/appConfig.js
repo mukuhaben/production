@@ -5,7 +5,11 @@
 export const appConfig = {
   // API configuration
   api: {
-    baseUrl: import.meta.env.VITE_API_URL || "http://localhost:3000/api",
+    baseUrl:
+      import.meta.env.VITE_API_URL ||
+      (import.meta.env.MODE === "production"
+        ? "https://firstcraft-backend-q68n.onrender.com/api" // Replace with your actual Render backend URL
+        : "http://localhost:3000/api"),
     timeout: 15000, // 15 seconds
     retryAttempts: 3,
     retryDelay: 1000, // 1 second

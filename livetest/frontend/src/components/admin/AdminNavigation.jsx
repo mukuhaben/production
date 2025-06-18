@@ -38,8 +38,8 @@ import {
   KeyboardArrowDown,
   Visibility as ViewIcon,
   Store as StoreIcon,
-  LocationOn as LocationIcon,
-  ListAlt as ListAltIcon, // Added for Orders
+  ListAlt as ListAltIcon,
+  Receipt as GRNIcon,
 } from "@mui/icons-material"
 import { useNavigate } from "react-router-dom"
 
@@ -113,8 +113,9 @@ const AdminNavigation = ({
   onLogout,
   activeTab,
   onTabChange,
-  onItemMasterSubTabChange,
+  onDirectNavigation,
   onCRUDOperation,
+  activeComponent,
 }) => {
   const navigate = useNavigate()
   const theme = useTheme()
@@ -126,10 +127,9 @@ const AdminNavigation = ({
     itemMaster: false,
     categories: false,
     sales: false,
-    inventory: false,
+    grn: false,
     suppliers: false,
     agents: false,
-    locations: false,
   })
 
   // Refs for dropdown positioning
@@ -137,10 +137,9 @@ const AdminNavigation = ({
     itemMaster: useRef(null),
     categories: useRef(null),
     sales: useRef(null),
-    inventory: useRef(null),
+    grn: useRef(null),
     suppliers: useRef(null),
     agents: useRef(null),
-    locations: useRef(null),
   }
 
   const isMenuOpen = Boolean(anchorEl)
@@ -166,89 +165,33 @@ const AdminNavigation = ({
       itemMaster: false,
       categories: false,
       sales: false,
-      inventory: false,
+      grn: false,
       suppliers: false,
       agents: false,
-      locations: false,
     })
   }, [])
 
-  // Enhanced CRUD operation handlers
-  const handleCRUDAction = useCallback(
-    (action, section, data = null) => {
-      console.log(`🔄 CRUD Action: ${action} on ${section}`, data)
+  // Enhanced direct navigation handler
+  const handleDirectComponentNavigation = useCallback(
+    (componentName, tabIndex, section, data = null) => {
+      console.log(`🎯 Direct navigation to: ${componentName} in tab ${tabIndex}`)
 
       // Close all dropdowns immediately
       handleAllDropdownsClose()
 
-      try {
-        // Handle navigation based on action and section
-        switch (section) {
-          case "itemMaster":
-            console.log(`📍 Navigating to Item Master - Action: ${action}`)
-            onTabChange(null, 1)
-
-            setTimeout(() => {
-              if (action === "create" && onItemMasterSubTabChange) {
-                console.log("🆕 Switching to New Item sub-tab")
-                onItemMasterSubTabChange(null, 0)
-              } else if (action === "read" && onItemMasterSubTabChange) {
-                console.log("📋 Switching to Manage Items sub-tab")
-                onItemMasterSubTabChange(null, 1)
-              }
-            }, 300) // Increased delay for better rendering
-            break
-
-          case "categories":
-            console.log(`📍 Navigating to Categories - Action: ${action}`)
-            onTabChange(null, 2)
-            break
-
-          case "orders": // New case for orders
-            console.log(`📍 Navigating to Orders - Action: ${action}`)
-            onTabChange(null, 3)
-            break
-
-          case "sales":
-            console.log(`📍 Navigating to Sales - Action: ${action}`)
-            onTabChange(null, 4) // Shifted index
-            break
-
-          case "inventory":
-            console.log(`📍 Navigating to Inventory - Action: ${action}`)
-            onTabChange(null, 5) // Shifted index
-            break
-
-          case "suppliers":
-            console.log(`📍 Navigating to Suppliers - Action: ${action}`)
-            onTabChange(null, 6) // Shifted index
-            break
-
-          case "locations":
-            console.log(`📍 Navigating to Locations - Action: ${action}`)
-            onTabChange(null, 7) // Shifted index
-            break
-
-          case "agents":
-            console.log(`📍 Navigating to Sales Agents - Action: ${action}`)
-            onTabChange(null, 8) // Shifted index
-            break
-
-          default:
-            console.warn(`⚠️ Unknown section: ${section}`)
-        }
-
-        // Call CRUD operation handler if provided
-        if (onCRUDOperation) {
-          onCRUDOperation(action, section, data)
-        }
-
-        console.log(`✅ Navigation completed for ${section}`)
-      } catch (error) {
-        console.error(`❌ Error in CRUD action:`, error)
+      // Use direct navigation if available
+      if (onDirectNavigation) {
+        onDirectNavigation(componentName, tabIndex)
       }
+
+      // Also call CRUD operation handler for backward compatibility
+      if (onCRUDOperation) {
+        onCRUDOperation("read", section, data)
+      }
+
+      console.log(`✅ Navigation completed for ${componentName}`)
     },
-    [onTabChange, onItemMasterSubTabChange, onCRUDOperation, handleAllDropdownsClose],
+    [onDirectNavigation, onCRUDOperation, handleAllDropdownsClose],
   )
 
   // Profile menu handlers
@@ -275,7 +218,15 @@ const AdminNavigation = ({
     onTabChange(null, tabIndex)
   }
 
-  // Clean dropdown renderer
+  // Check if a tab or component is active
+  const isTabActive = (tabIndex, componentName = null) => {
+    if (componentName && activeComponent === componentName) {
+      return true
+    }
+    return activeTab === tabIndex && !activeComponent
+  }
+
+  // Clean dropdown renderer with direct navigation
   const renderCRUDDropdown = (section, isOpen, anchorRef, items) => (
     <Popper
       open={isOpen}
@@ -305,7 +256,7 @@ const AdminNavigation = ({
                     key={`${section}-${index}`}
                     onClick={() => {
                       console.log(`🖱️ Dropdown item clicked: ${item.label} in ${section}`)
-                      handleCRUDAction(item.action, section, item.data)
+                      handleDirectComponentNavigation(item.componentName, item.tabIndex, section, item.data)
                     }}
                   >
                     <ListItemIcon>{item.icon}</ListItemIcon>
@@ -366,7 +317,7 @@ const AdminNavigation = ({
       position="static"
       elevation={0}
       sx={{
-        bgcolor: "#1976d2", // Blue background
+        bgcolor: "#1976d2",
         borderBottom: "1px solid rgba(255,255,255,0.1)",
         boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
       }}
@@ -395,7 +346,7 @@ const AdminNavigation = ({
           {/* Dashboard */}
           <AdminNavButton
             startIcon={<Dashboard sx={{ fontSize: 18 }} />}
-            active={activeTab === 0}
+            active={isTabActive(0)}
             onClick={() => handleTabClick(0)}
           >
             Dashboard
@@ -411,7 +362,7 @@ const AdminNavigation = ({
             <AdminNavButton
               startIcon={<ShoppingCart sx={{ fontSize: 18 }} />}
               endIcon={<KeyboardArrowDown sx={{ fontSize: 16 }} />}
-              active={activeTab === 1}
+              active={isTabActive(1) || activeComponent === "NewItemForm" || activeComponent === "ManageItems"}
             >
               Item Master
             </AdminNavButton>
@@ -421,14 +372,16 @@ const AdminNavigation = ({
                 label: "New Item",
                 description: "Create new product",
                 icon: <AddIcon sx={{ color: "#2196f3", fontSize: 18 }} />,
-                action: "create",
+                componentName: "NewItemForm",
+                tabIndex: 1,
                 data: { type: "item" },
               },
               {
                 label: "Manage Items",
                 description: "View and edit products",
                 icon: <ListIcon sx={{ color: "#4caf50", fontSize: 18 }} />,
-                action: "read",
+                componentName: "ManageItems",
+                tabIndex: 1,
                 data: { type: "item" },
               },
             ])}
@@ -444,37 +397,22 @@ const AdminNavigation = ({
             <AdminNavButton
               startIcon={<CategoryIcon sx={{ fontSize: 18 }} />}
               endIcon={<KeyboardArrowDown sx={{ fontSize: 16 }} />}
-              active={activeTab === 2}
+              active={isTabActive(2) || activeComponent === "CategoryManagement"}
             >
               Categories
             </AdminNavButton>
 
             {renderCRUDDropdown("categories", dropdownStates.categories, dropdownRefs.categories, [
               {
-                label: "Add Category",
-                description: "Create new category",
-                icon: <AddIcon sx={{ color: "#2196f3", fontSize: 18 }} />,
-                action: "create",
-                data: { type: "category" },
-              },
-              {
-                label: "View Categories",
-                description: "Browse all categories",
+                label: "Manage Categories",
+                description: "View and manage categories",
                 icon: <ViewIcon sx={{ color: "#4caf50", fontSize: 18 }} />,
-                action: "read",
+                componentName: "CategoryManagement",
+                tabIndex: 2,
                 data: { type: "category" },
               },
             ])}
           </Box>
-
-          {/* Orders Management Button */}
-          <AdminNavButton
-            startIcon={<ListAltIcon sx={{ fontSize: 18 }} />}
-            active={activeTab === 3}
-            onClick={() => handleTabClick(3)}
-          >
-            Orders
-          </AdminNavButton>
 
           {/* Sales Dropdown */}
           <Box
@@ -486,65 +424,68 @@ const AdminNavigation = ({
             <AdminNavButton
               startIcon={<SalesIcon sx={{ fontSize: 18 }} />}
               endIcon={<KeyboardArrowDown sx={{ fontSize: 16 }} />}
-              active={activeTab === 4} // Shifted index
+              active={
+                isTabActive(3) || activeComponent === "OrdersManagement" || activeComponent === "InvoiceManagement"
+              }
             >
               Sales
             </AdminNavButton>
 
             {renderCRUDDropdown("sales", dropdownStates.sales, dropdownRefs.sales, [
               {
-                label: "Purchase Order",
-                description: "View Purchase orders",
-                icon: <AddIcon sx={{ color: "#2196f3", fontSize: 18 }} />,
-                action: "create",
-                data: { type: "Purchase order" },
+                label: "Orders",
+                description: "Customer orders management",
+                icon: <ListAltIcon sx={{ color: "#2196f3", fontSize: 18 }} />,
+                componentName: "OrdersManagement",
+                tabIndex: 3,
+                data: { type: "orders" },
               },
               {
-                label: "    Invoices",
-                description: "Invoices",
+                label: "Invoices",
+                description: "Invoice management",
                 icon: <ViewIcon sx={{ color: "#4caf50", fontSize: 18 }} />,
-                action: "read",
-                data: { type: "Invoices" },
-              },
-                 {
-                label: "    Receipt",
-                description: "Customer receipt:order summary",
-                icon: <ViewIcon sx={{ color: "#4caf50", fontSize: 18 }} />,
-                action: "read",
-                data: { type: "Receipt" },
+                componentName: "InvoiceManagement",
+                tabIndex: 3,
+                data: { type: "invoices" },
               },
             ])}
           </Box>
 
-          {/* Inventory Dropdown */}
+          {/* GRN Dropdown */}
           <Box
-            ref={dropdownRefs.inventory}
-            onMouseEnter={() => handleDropdownToggle("inventory", true)}
-            onMouseLeave={() => handleDropdownToggle("inventory", false)}
+            ref={dropdownRefs.grn}
+            onMouseEnter={() => handleDropdownToggle("grn", true)}
+            onMouseLeave={() => handleDropdownToggle("grn", false)}
             sx={{ position: "relative" }}
           >
             <AdminNavButton
-              startIcon={<Inventory sx={{ fontSize: 18 }} />}
+              startIcon={<GRNIcon sx={{ fontSize: 18 }} />}
               endIcon={<KeyboardArrowDown sx={{ fontSize: 16 }} />}
-              active={activeTab === 5} // Shifted index
+              active={
+                isTabActive(4) ||
+                activeComponent === "PurchaseOrderManagement" ||
+                activeComponent === "InventoryManagement"
+              }
             >
               GRN
             </AdminNavButton>
 
-            {renderCRUDDropdown("inventory", dropdownStates.inventory, dropdownRefs.inventory, [
+            {renderCRUDDropdown("grn", dropdownStates.grn, dropdownRefs.grn, [
               {
-                label: "GRN",
-                description: "Goods Received",
+                label: "Purchase Orders",
+                description: "Manage purchase orders",
                 icon: <AddIcon sx={{ color: "#2196f3", fontSize: 18 }} />,
-                action: "create",
-                data: { type: "stock" },
+                componentName: "PurchaseOrderManagement",
+                tabIndex: 4,
+                data: { type: "purchase-orders" },
               },
               {
-                label: "",
-                description: "",
-                icon: <ViewIcon sx={{ color: "#4caf50", fontSize: 18 }} />,
-                action: "read",
-                data: { type: "stock" },
+                label: "GRN Goods Received",
+                description: "Goods received notes",
+                icon: <Inventory sx={{ color: "#4caf50", fontSize: 18 }} />,
+                componentName: "InventoryManagement",
+                tabIndex: 4,
+                data: { type: "grn" },
               },
             ])}
           </Box>
@@ -559,65 +500,19 @@ const AdminNavigation = ({
             <AdminNavButton
               startIcon={<SuppliersIcon sx={{ fontSize: 18 }} />}
               endIcon={<KeyboardArrowDown sx={{ fontSize: 16 }} />}
-              active={activeTab === 6} // Shifted index
+              active={isTabActive(5) || activeComponent === "SupplierManagement"}
             >
               Suppliers
             </AdminNavButton>
 
             {renderCRUDDropdown("suppliers", dropdownStates.suppliers, dropdownRefs.suppliers, [
               {
-                label: "Add Supplier",
-                description: "Register new vendor",
-                icon: <AddIcon sx={{ color: "#2196f3", fontSize: 18 }} />,
-                action: "create",
-                data: { type: "supplier" },
-              },
-              {
-                label: "View Suppliers",
-                description: "Browse vendors",
+                label: "Manage Suppliers",
+                description: "View and manage suppliers",
                 icon: <ViewIcon sx={{ color: "#4caf50", fontSize: 18 }} />,
-                action: "read",
+                componentName: "SupplierManagement",
+                tabIndex: 5,
                 data: { type: "supplier" },
-              },
-            ])}
-          </Box>
-
-          {/* Locations Dropdown */}
-          <Box
-            ref={dropdownRefs.locations}
-            onMouseEnter={() => handleDropdownToggle("locations", true)}
-            onMouseLeave={() => handleDropdownToggle("locations", false)}
-            sx={{ position: "relative" }}
-          >
-            <AdminNavButton
-              startIcon={<LocationIcon sx={{ fontSize: 18 }} />}
-              endIcon={<KeyboardArrowDown sx={{ fontSize: 16 }} />}
-              active={activeTab === 7} // Shifted index
-            >
-              Locations
-            </AdminNavButton>
-
-            {renderCRUDDropdown("locations", dropdownStates.locations, dropdownRefs.locations, [
-              {
-                label: "Westlands",
-                description: "Manage Westlands branch",
-                icon: <LocationIcon sx={{ color: "#2196f3", fontSize: 18 }} />,
-                action: "read",
-                data: { location: "westlands" },
-              },
-              {
-                label: "Parklands",
-                description: "Manage Parklands branch",
-                icon: <LocationIcon sx={{ color: "#4caf50", fontSize: 18 }} />,
-                action: "read",
-                data: { location: "parklands" },
-              },
-              {
-                label: "Add Location",
-                description: "Register new location",
-                icon: <AddIcon sx={{ color: "#ff9800", fontSize: 18 }} />,
-                action: "create",
-                data: { type: "location" },
               },
             ])}
           </Box>
@@ -632,34 +527,28 @@ const AdminNavigation = ({
             <AdminNavButton
               startIcon={<People sx={{ fontSize: 18 }} />}
               endIcon={<KeyboardArrowDown sx={{ fontSize: 16 }} />}
-              active={activeTab === 8} // Shifted index
+              active={isTabActive(6) || activeComponent === "SalesAgentAdminPanel"}
             >
               Sales Agents
             </AdminNavButton>
 
             {renderCRUDDropdown("agents", dropdownStates.agents, dropdownRefs.agents, [
               {
-                label: "Add Agent",
-                description: "Register new agent",
-                icon: <AddIcon sx={{ color: "#2196f3", fontSize: 18 }} />,
-                action: "create",
-                data: { type: "agent" },
-              },
-              {
-                label: "View Agents",
-                description: "Browse team members",
+                label: "Manage Agents",
+                description: "View and manage sales agents",
                 icon: <ViewIcon sx={{ color: "#4caf50", fontSize: 18 }} />,
-                action: "read",
+                componentName: "SalesAgentAdminPanel",
+                tabIndex: 6,
                 data: { type: "agent" },
               },
             ])}
           </Box>
 
-          {/* Customer Management Button */}
+          {/* Customers Button */}
           <AdminNavButton
-            startIcon={<People sx={{ fontSize: 18 }} />} // Using People icon for now
-            active={activeTab === 9} // Shifted index
-            onClick={() => handleTabClick(9)} // Shifted index
+            startIcon={<People sx={{ fontSize: 18 }} />}
+            active={isTabActive(7) || activeComponent === "CustomerManagement"}
+            onClick={() => handleDirectComponentNavigation("CustomerManagement", 7, "customers")}
           >
             Customers
           </AdminNavButton>

@@ -5,52 +5,47 @@ import {
   Box,
   Paper,
   Typography,
-  Button,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Card,
-  CardContent,
-  Grid,
+  Button,
   Chip,
   IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
+  Grid,
+  Card,
+  CardContent,
   TextField,
+  InputAdornment,
   Tabs,
   Tab,
-  Avatar,
+  Alert,
+  Snackbar,
   Tooltip,
+  Avatar,
 } from "@mui/material"
 import {
-  Add as AddIcon,
+  Search as SearchIcon,
   Visibility as ViewIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
+  Block as BlockIcon,
+  CheckCircle as CheckCircleIcon,
+  Person as PersonIcon,
   Email as EmailIcon,
   Phone as PhoneIcon,
-  LocationOn as LocationIcon, // Re-using for address/general location
-  Person as PersonIcon, // For customer avatar
-  Search as SearchIcon,
-  Close as CloseIcon,
-  CreditCard as CreditCardIcon, // For Transactions
-  MonetizationOn as MonetizationOnIcon, // For Cashbacks
-  Block as BlockIcon, // For Block action
-  CheckCircleOutline as UnblockIcon, // For Unblock action
-  DeleteForever as DeleteForeverIcon, // For permanent delete
-  WarningAmber as WarningIcon,
+  LocationOn as LocationIcon,
+  AccountBalanceWallet as WalletIcon,
+  History as HistoryIcon,
+  CardGiftcard as CashbackIcon,
+  Refresh as RefreshIcon,
 } from "@mui/icons-material"
-import { Alert as MuiAlert } from "@mui/material" // Renamed to avoid conflict with alertInfo state
-import CircularProgress from "@mui/material/CircularProgress"; // for loading states
-import { usersAPI } from "../../services/api"; // Import usersAPI
 
-
-// TabPanel Component for customer details tabs
+// Tab Panel Component
 function TabPanel(props) {
   const { children, value, index, ...other } = props
   return (
@@ -67,324 +62,284 @@ function TabPanel(props) {
 }
 
 const CustomerManagement = () => {
+  // State management
   const [customers, setCustomers] = useState([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [filteredCustomers, setFilteredCustomers] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [openDialog, setOpenDialog] = useState(false)
-  const [selectedCustomer, setSelectedCustomer] = useState(null) // For view/edit/delete details
-  const [detailedCustomerData, setDetailedCustomerData] = useState(null); // For view dialog
-  const [isDetailLoading, setIsDetailLoading] = useState(false);
-
-  const [customerFormData, setCustomerFormData] = useState({
-    id: null, // For editing
-    firstName: "", // Changed from name
-    lastName: "",  // Added
-    username: "", // Added, usually email or unique identifier
-    email: "",
-    phone: "",
-    // address: "", // Address might be more complex, handle later if needed via user_addresses table
-    password: "", // For new customer
-    userType: "customer", // Default
-    isActive: true, // Default
+  const [selectedCustomer, setSelectedCustomer] = useState(null)
+  const [viewDialogOpen, setViewDialogOpen] = useState(false)
+  const [tabValue, setTabValue] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [notification, setNotification] = useState({
+    open: false,
+    message: "",
+    severity: "success",
   })
-  const [isAdd, setIsAdd] = useState(false)
-  const [alertInfo, setAlertInfo] = useState({ open: false, message: "", severity: "success" })
 
-  const [detailsOpen, setDetailsOpen] = useState(false)
-  const [detailsTabValue, setDetailsTabValue] = useState(0)
-  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const [customerToDelete, setCustomerToDelete] = useState(null);
+  // Initialize sample customer data
+  useEffect(() => {
+    const sampleCustomers = [
+      {
+        id: 1,
+        name: "John Doe",
+        email: "john.doe@example.com",
+        phone: "+254 722 123 456",
+        location: "Nairobi",
+        registrationDate: "2024-01-15",
+        status: "active",
+        totalOrders: 15,
+        totalSpent: 45000,
+        walletBalance: 2500,
+        cashbackEarned: 1200,
+        lastLogin: "2024-06-15",
+        transactions: [
+          {
+            id: 1,
+            date: "2024-06-10",
+            type: "purchase",
+            amount: 1500,
+            description: "Office supplies order",
+            status: "completed",
+          },
+          {
+            id: 2,
+            date: "2024-06-08",
+            type: "cashback",
+            amount: 75,
+            description: "Cashback from previous order",
+            status: "completed",
+          },
+        ],
+        cashbackHistory: [
+          {
+            id: 1,
+            date: "2024-06-08",
+            orderAmount: 1500,
+            cashbackRate: 5,
+            cashbackAmount: 75,
+            status: "credited",
+          },
+        ],
+      },
+      {
+        id: 2,
+        name: "Jane Smith",
+        email: "jane.smith@company.com",
+        phone: "+254 733 987 654",
+        location: "Mombasa",
+        registrationDate: "2024-02-20",
+        status: "active",
+        totalOrders: 8,
+        totalSpent: 28000,
+        walletBalance: 1200,
+        cashbackEarned: 800,
+        lastLogin: "2024-06-14",
+        transactions: [
+          {
+            id: 1,
+            date: "2024-06-12",
+            type: "purchase",
+            amount: 3200,
+            description: "Bulk stationery order",
+            status: "completed",
+          },
+        ],
+        cashbackHistory: [
+          {
+            id: 1,
+            date: "2024-06-12",
+            orderAmount: 3200,
+            cashbackRate: 4,
+            cashbackAmount: 128,
+            status: "credited",
+          },
+        ],
+      },
+      {
+        id: 3,
+        name: "Michael Johnson",
+        email: "m.johnson@school.edu",
+        phone: "+254 711 456 789",
+        location: "Kisumu",
+        registrationDate: "2024-03-10",
+        status: "disabled",
+        totalOrders: 3,
+        totalSpent: 12000,
+        walletBalance: 500,
+        cashbackEarned: 300,
+        lastLogin: "2024-05-20",
+        transactions: [],
+        cashbackHistory: [],
+      },
+    ]
 
+    setCustomers(sampleCustomers)
+    setFilteredCustomers(sampleCustomers)
+  }, [])
 
-  const fetchCustomers = async () => {
-    setIsLoading(true)
-    setAlertInfo({ open: false, message: "" });
+  // Filter customers based on search term
+  useEffect(() => {
+    const filtered = customers.filter(
+      (customer) =>
+        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.phone.includes(searchTerm),
+    )
+    setFilteredCustomers(filtered)
+  }, [customers, searchTerm])
+
+  // Handle customer status toggle
+  const handleStatusToggle = async (customerId, currentStatus) => {
+    setLoading(true)
     try {
-      const response = await usersAPI.getAll({ userType: "customer", limit: 100, sortBy: "created_at", sortOrder: "DESC" });
-      // Assuming usersAPI.getAll returns response in response.data directly
-      // and the actual user list is in response.data.data.users or response.data.users
-      // Based on api.js, axios response is response.data. The actual data structure from backend can vary.
-      // Let's assume the backend returns { success: true, data: { users: [...] } } or { success: true, users: [...] }
-      // The old code used response.data.users, so we'll stick to that if response.data exists.
-      if (response.data && response.data.success && response.data.data && Array.isArray(response.data.data.users)) {
-        setCustomers(response.data.data.users);
-      } else if (response.data && response.data.success && Array.isArray(response.data.users)) { // Fallback if users are directly under response.data
-        setCustomers(response.data.users);
-      }
-      else {
-        setCustomers([])
-        setAlertInfo({ open: true, message: response.data?.message || "Failed to fetch customers.", severity: "error" });
-      }
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      const newStatus = currentStatus === "active" ? "disabled" : "active"
+      setCustomers((prev) =>
+        prev.map((customer) => (customer.id === customerId ? { ...customer, status: newStatus } : customer)),
+      )
+
+      showNotification(
+        `Customer ${newStatus === "active" ? "enabled" : "disabled"} successfully`,
+        newStatus === "active" ? "success" : "warning",
+      )
     } catch (error) {
-      console.error("Fetch customers error:", error)
-      setCustomers([])
-      setAlertInfo({ open: true, message: error.response?.data?.message || error.message || "An error occurred while fetching customers.", severity: "error" });
+      showNotification("Error updating customer status", "error")
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
-  useEffect(() => {
-    fetchCustomers()
-  }, [])
-
-  const handleSearch = (event) => {
-    setSearchTerm(event.target.value)
+  // Handle view customer details
+  const handleViewCustomer = (customer) => {
+    setSelectedCustomer(customer)
+    setViewDialogOpen(true)
   }
 
-  const filteredCustomers = customers.filter((customer) => {
-    const name = `${customer.first_name || ""} ${customer.last_name || ""}`.toLowerCase()
-    const email = (customer.email || "").toLowerCase()
-    const phone = (customer.phone || "").toLowerCase()
-    const searchTermLower = searchTerm.toLowerCase()
-    return name.includes(searchTermLower) || email.includes(searchTermLower) || phone.includes(searchTermLower)
-  })
-
-  const handleFormInputChange = (event) => {
-    const { name, value, type, checked } = event.target;
-    setCustomerFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
-  };
-
-  const resetForm = () => {
-    setCustomerFormData({
-      id: null,
-      firstName: "",
-      lastName: "",
-      username: "",
-      email: "",
-      phone: "",
-      password: "",
-      userType: "customer",
-      isActive: true,
+  // Show notification
+  const showNotification = (message, severity = "success") => {
+    setNotification({
+      open: true,
+      message,
+      severity,
     })
   }
 
-  const handleAddCustomerDialogOpen = () => {
-    setIsAdd(true)
-    resetForm()
-    setOpenDialog(true)
+  // Handle tab change
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue)
   }
 
-  // No separate edit dialog for now, edit will be inline or a separate feature.
-  // For this task, we focus on Add, Block/Unblock, Remove, View.
-
-  const handleAddOrUpdateCustomer = async (event) => {
-    event.preventDefault();
-    setAlertInfo({ open: false, message: "" });
-    const { id, firstName, lastName, username, email, phone, password, isActive } = customerFormData;
-
-    if (!firstName || !lastName || !username || !email) {
-      setAlertInfo({ open: true, message: "First Name, Last Name, Username, and Email are required.", severity: "error" });
-      return;
-    }
-    if (isAdd && !password) {
-       setAlertInfo({ open: true, message: "Password is required for new customers.", severity: "error" });
-      return;
-    }
-
-    const payload = {
-      first_name: firstName,
-      last_name: lastName,
-      username,
-      email,
-      phone,
-      user_type: "customer",
-      is_active: isActive,
-      // For simplicity, not handling address or other fields from schema yet
-    };
-    if (isAdd) {
-      payload.password = password;
-    }
-
-    // const endpoint = isAdd ? '/users/register' : `/users/${id}`; // Assuming PUT for update on /users/:id
-    // const method = isAdd ? 'post' : 'put';
-    // For this task, only implementing ADD. Update of user details is more complex.
-    // The backend for /users/register is in authController, not users.js directly for creation.
-    // Using a placeholder /api/users for POST for now.
-
-    try {
-      if (isAdd) { // Only handling add for now
-        const response = await usersAPI.registerCustomer(payload);
-        if (response.data && response.data.success) {
-          setAlertInfo({ open: true, message: "Customer added successfully!", severity: "success" });
-          fetchCustomers(); // Refresh list
-          handleCloseDialog();
-        } else {
-          setAlertInfo({ open: true, message: response.data?.message || "Failed to add customer.", severity: "error" });
-        }
-      } else {
-         // Update logic would go here, e.g. usersAPI.update(id, payload)
-         setAlertInfo({ open: true, message: "Update functionality not fully implemented in this step.", severity: "info" });
-         // For now, just close dialog on "edit" attempt
-         handleCloseDialog();
-      }
-    } catch (error) {
-      console.error("Add/Update customer error:", error);
-      setAlertInfo({ open: true, message: error.response?.data?.message || error.message || "An error occurred.", severity: "error" });
-    }
-  };
-
-
-  const handleViewCustomerDetails = async (customer) => {
-    setSelectedCustomer(customer); // Keep basic info for dialog title
-    setDetailsOpen(true);
-    setDetailsTabValue(0);
-    setIsDetailLoading(true);
-    setDetailedCustomerData(null); // Clear previous detailed data
-    setAlertInfo({ open: false, message: "" });
-
-    try {
-      const response = await usersAPI.getById(customer.id);
-      if (response.data && response.data.success) {
-        setDetailedCustomerData(response.data.data.user); // Assuming user is nested under data.user
-      } else {
-        setAlertInfo({ open: true, message: response.data?.message || "Failed to fetch customer details.", severity: "error" });
-      }
-    } catch (error) {
-      console.error("Fetch customer details error:", error);
-      setAlertInfo({ open: true, message: error.response?.data?.message || error.message || "An error occurred fetching details.", severity: "error" });
-    } finally {
-      setIsDetailLoading(false);
-    }
-  };
-
-  const handleCloseDialog = () => {
-    setOpenDialog(false)
-    setSelectedCustomer(null) // Clear selected customer when closing add/edit dialog
-    resetForm()
-  }
-
-  const handleOpenConfirmDeleteDialog = (customer) => {
-    setCustomerToDelete(customer);
-    setConfirmDeleteOpen(true);
-  };
-
-  const handleCloseConfirmDeleteDialog = () => {
-    setCustomerToDelete(null);
-    setConfirmDeleteOpen(false);
-  };
-
-  const handleConfirmDeleteCustomer = async () => {
-    if (!customerToDelete) return;
-    setAlertInfo({ open: false, message: "" });
-    try {
-      const response = await usersAPI.deactivateUser(customerToDelete.id, { reason: "Deactivated by admin from Customer Management" });
-      if (response.data && response.data.success) {
-        setAlertInfo({ open: true, message: `Customer ${customerToDelete.first_name} deactivated successfully.`, severity: "success" });
-        fetchCustomers(); // Refresh list
-      } else {
-        setAlertInfo({ open: true, message: response.data?.message || "Failed to deactivate customer.", severity: "error" });
-      }
-    } catch (error) {
-      console.error("Deactivate customer error:", error);
-      setAlertInfo({ open: true, message: error.response?.data?.message || error.message || "An error occurred.", severity: "error" });
-    } finally {
-      handleCloseConfirmDeleteDialog();
-    }
-  };
-
-  const handleToggleBlockCustomer = async (customer) => {
-    setAlertInfo({ open: false, message: "" });
-    const newStatus = !customer.is_active;
-    const action = newStatus ? "reactivate" : "deactivate";
-    const actionPastTense = newStatus ? "reactivated" : "deactivated";
-    // No longer need a payload for reactivate, and reason is part of deactivateUser
-    // const payload = {
-    //   is_active: newStatus,
-    //   [newStatus ? 'reactivation_reason' : 'deactivation_reason']: `${actionPastTense} by admin from Customer Management panel`
-    // };
-
-    try {
-      let response;
-      if (newStatus) { // Reactivating
-        response = await usersAPI.reactivateUser(customer.id);
-      } else { // Deactivating
-        response = await usersAPI.deactivateUser(customer.id, { reason: `${actionPastTense} by admin from Customer Management panel` });
-      }
-
-      if (response.data && response.data.success) {
-        setAlertInfo({ open: true, message: `Customer ${actionPastTense} successfully.`, severity: "success" });
-        fetchCustomers(); // Refresh list
-      } else {
-        setAlertInfo({ open: true, message: response.data?.message || `Failed to ${action} customer.`, severity: "error" });
-      }
-    } catch (error) {
-      console.error(`Toggle block customer error (${action}):`, error);
-      setAlertInfo({ open: true, message: error.response?.data?.message || error.message || "An error occurred.", severity: "error" });
-    }
-  };
-
-
-  const getStatusChipColor = (isActive) => { // Changed from status string to boolean isActive
-    if (isActive) return "success"
-    return "default" // For inactive/blocked
-  }
-
+  // Format currency
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-KE", {
       style: "currency",
       currency: "KES",
-    }).format(amount || 0)
+    }).format(amount)
   }
 
+  // Get status color
+  const getStatusColor = (status) => {
+    return status === "active" ? "success" : "error"
+  }
 
   return (
-    <Box sx={{ width: "100%", bgcolor: "#f8fafc", minHeight: "100vh", p:3 }}>
-      <Paper sx={{ mb: 3, borderRadius: 2, overflow: "hidden" }}>
-        <Box sx={{ p: 3, bgcolor: "#1976d2", color: "white" }}>
-          <Typography variant="h5" sx={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600 }}>
-            Customer Management
-          </Typography>
-          <Typography variant="body2" sx={{ opacity: 0.9, mt: 1 }}>
-            View and manage customer information, transactions, and cashbacks.
-          </Typography>
-        </Box>
-      </Paper>
-
+    <Box sx={{ width: "100%", bgcolor: "#f8fafc", minHeight: "100vh", p: 3 }}>
+      {/* Header */}
       <Paper sx={{ mb: 3, p: 3, borderRadius: 2 }}>
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-          <Typography variant="h6" sx={{ fontFamily: "'Poppins', sans-serif" }}>
-            Customer List
+          <Typography variant="h5" sx={{ fontWeight: 600, color: "#1976d2" }}>
+            Customer Management
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleAddCustomerDialogOpen} // Changed
-            sx={{ fontFamily: "'Poppins', sans-serif" }}
-          >
-            Add Customer
+          <Button variant="outlined" startIcon={<RefreshIcon />} onClick={() => window.location.reload()}>
+            Refresh
           </Button>
         </Box>
 
+        {/* Summary Cards */}
+        <Grid container spacing={3} sx={{ mb: 3 }}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ bgcolor: "#e3f2fd", border: "1px solid #bbdefb" }}>
+              <CardContent sx={{ textAlign: "center", py: 2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 600, color: "#1976d2" }}>
+                  {customers.length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Total Customers
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ bgcolor: "#e8f5e8", border: "1px solid #c8e6c9" }}>
+              <CardContent sx={{ textAlign: "center", py: 2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 600, color: "#388e3c" }}>
+                  {customers.filter((c) => c.status === "active").length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Active Customers
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ bgcolor: "#ffebee", border: "1px solid #ffcdd2" }}>
+              <CardContent sx={{ textAlign: "center", py: 2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 600, color: "#d32f2f" }}>
+                  {customers.filter((c) => c.status === "disabled").length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Disabled Customers
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ bgcolor: "#f3e5f5", border: "1px solid #e1bee7" }}>
+              <CardContent sx={{ textAlign: "center", py: 2 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: "#7b1fa2" }}>
+                  {formatCurrency(customers.reduce((sum, c) => sum + c.totalSpent, 0))}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Total Revenue
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Search */}
         <TextField
           fullWidth
+          size="small"
           placeholder="Search customers by name, email, or phone..."
           value={searchTerm}
-          onChange={handleSearch}
-          InputProps={{ startAdornment: <SearchIcon color="action" sx={{ mr: 1 }} /> }}
-          size="small"
-          sx={{ mb: 2 }}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+          sx={{ maxWidth: 400 }}
         />
+      </Paper>
 
-        {alertInfo.open && (
-          <MuiAlert severity={alertInfo.severity} onClose={() => setAlertInfo({ ...alertInfo, open: false })} sx={{ mb: 2 }}>
-            {alertInfo.message}
-          </MuiAlert>
-        )}
-        {isLoading && <Box sx={{display: 'flex', justifyContent: 'center', my: 3}}><CircularProgress /></Box>}
-
-        {!isLoading && <TableContainer>
+      {/* Customer Table */}
+      <Paper sx={{ borderRadius: 2 }}>
+        <TableContainer>
           <Table>
             <TableHead>
               <TableRow sx={{ bgcolor: "#f5f5f5" }}>
                 <TableCell sx={{ fontWeight: 600 }}>Customer</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Contact</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Location</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Orders</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Total Spent</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Joined Date</TableCell>
-                <TableCell sx={{ fontWeight: 600, textAlign: 'center' }}>Actions</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -392,216 +347,256 @@ const CustomerManagement = () => {
                 <TableRow key={customer.id} hover>
                   <TableCell>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                      <Avatar sx={{ bgcolor: "#1976d2" }}><PersonIcon /></Avatar>
+                      <Avatar sx={{ bgcolor: "#1976d2" }}>
+                        <PersonIcon />
+                      </Avatar>
                       <Box>
-                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                          {customer.first_name} {customer.last_name}
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {customer.name}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">ID: {customer.id.substring(0,8)}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Joined: {new Date(customer.registrationDate).toLocaleDateString()}
+                        </Typography>
                       </Box>
                     </Box>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2">{customer.email}</Typography>
-                    <Typography variant="body2" color="text.secondary">{customer.phone || "N/A"}</Typography>
+                    <Box>
+                      <Typography variant="body2" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <EmailIcon fontSize="small" />
+                        {customer.email}
+                      </Typography>
+                      <Typography variant="body2" sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
+                        <PhoneIcon fontSize="small" />
+                        {customer.phone}
+                      </Typography>
+                    </Box>
                   </TableCell>
                   <TableCell>
-                    <Chip
-                      label={customer.is_active ? "Active" : "Inactive"}
-                      color={getStatusChipColor(customer.is_active)}
-                      size="small"
-                    />
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <LocationIcon fontSize="small" />
+                      {customer.location}
+                    </Box>
                   </TableCell>
-                   <TableCell>
-                    <Typography variant="body2">{new Date(customer.created_at).toLocaleDateString()}</Typography>
+                  <TableCell>{customer.totalOrders}</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(customer.totalSpent)}</TableCell>
+                  <TableCell>
+                    <Chip label={customer.status.toUpperCase()} color={getStatusColor(customer.status)} size="small" />
                   </TableCell>
-                  <TableCell sx={{textAlign: 'center'}}>
-                    <Tooltip title="View Details">
-                      <IconButton size="small" onClick={() => handleViewCustomerDetails(customer)}><ViewIcon /></IconButton>
-                    </Tooltip>
-                    <Tooltip title={customer.is_active ? "Block Customer" : "Unblock Customer"}>
-                      <IconButton size="small" onClick={() => handleToggleBlockCustomer(customer)}>
-                        {customer.is_active ? <BlockIcon /> : <UnblockIcon />}
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Deactivate Customer">
-                      <IconButton size="small" color="error" onClick={() => handleOpenConfirmDeleteDialog(customer)}><DeleteForeverIcon /></IconButton>
-                    </Tooltip>
+                  <TableCell>
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      <Tooltip title="View Details">
+                        <IconButton size="small" onClick={() => handleViewCustomer(customer)}>
+                          <ViewIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title={customer.status === "active" ? "Disable Customer" : "Enable Customer"}>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleStatusToggle(customer.id, customer.status)}
+                          disabled={loading}
+                          color={customer.status === "active" ? "error" : "success"}
+                        >
+                          {customer.status === "active" ? <BlockIcon /> : <CheckCircleIcon />}
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}
-              {filteredCustomers.length === 0 && !isLoading && (
-                <TableRow>
-                  <TableCell colSpan={5} sx={{ textAlign: "center", py: 4 }}>
-                    <Typography color="text.secondary">No customers found.</Typography>
-                  </TableCell>
-                </TableRow>
-              )}
             </TableBody>
           </Table>
         </TableContainer>
-}
       </Paper>
 
-      {/* Add Customer Dialog */}
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <Typography variant="h6">{isAdd ? "Add New Customer" : "Edit Customer (Not Implemented)"}</Typography>
-            <IconButton onClick={handleCloseDialog}><CloseIcon /></IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          <Box component="form" onSubmit={handleAddOrUpdateCustomer} sx={{ mt: 2 }}>
-            <TextField name="firstName" label="First Name" value={customerFormData.firstName} onChange={handleFormInputChange} required sx={{ mb: 2 }} fullWidth/>
-            <TextField name="lastName" label="Last Name" value={customerFormData.lastName} onChange={handleFormInputChange} required sx={{ mb: 2 }} fullWidth/>
-            <TextField name="username" label="Username" value={customerFormData.username} onChange={handleFormInputChange} required sx={{ mb: 2 }} fullWidth helperText="Usually same as email or a unique ID"/>
-            <TextField name="email" label="Email Address" type="email" value={customerFormData.email} onChange={handleFormInputChange} required sx={{ mb: 2 }} fullWidth/>
-            <TextField name="phone" label="Phone Number" value={customerFormData.phone} onChange={handleFormInputChange} sx={{ mb: 2 }} fullWidth/>
-            {isAdd && <TextField name="password" label="Password" type="password" value={customerFormData.password} onChange={handleFormInputChange} required sx={{ mb: 2 }} fullWidth/>}
-            <TextField name="isActive" select label="Status" value={customerFormData.isActive} onChange={(e) => setCustomerFormData(prev => ({...prev, isActive: e.target.value === 'true'}))} SelectProps={{ native: true }}fullWidth sx={{ mb: 2 }}>
-              <option value="true">Active</option>
-              <option value="false">Inactive</option>
-            </TextField>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button onClick={handleAddOrUpdateCustomer} variant="contained" disabled={!isAdd}> {/* Only Add enabled for now */}
-            {isAdd ? "Add Customer" : "Save Changes"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Confirm Delete Dialog */}
-      <Dialog open={confirmDeleteOpen} onClose={handleCloseConfirmDeleteDialog} maxWidth="xs">
-        <DialogTitle>Confirm Deactivation</DialogTitle>
-        <DialogContent>
-          <Typography>Are you sure you want to deactivate customer: {customerToDelete?.first_name} {customerToDelete?.last_name}?</Typography>
-          <Typography variant="caption">This action will mark the customer as inactive.</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseConfirmDeleteDialog}>Cancel</Button>
-          <Button onClick={handleConfirmDeleteCustomer} color="error">Deactivate</Button>
-        </DialogActions>
-      </Dialog>
-
       {/* Customer Details Dialog */}
-      <Dialog open={detailsOpen} onClose={() => setDetailsOpen(false)} maxWidth="lg" fullWidth>
+      <Dialog open={viewDialogOpen} onClose={() => setViewDialogOpen(false)} maxWidth="lg" fullWidth>
         <DialogTitle>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <Typography variant="h6">{selectedCustomer?.first_name} {selectedCustomer?.last_name} - Customer Details</Typography>
-            <IconButton onClick={() => setDetailsOpen(false)}><CloseIcon /></IconButton>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Avatar sx={{ bgcolor: "#1976d2" }}>
+              <PersonIcon />
+            </Avatar>
+            <Box>
+              <Typography variant="h6">{selectedCustomer?.name}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Customer Details
+              </Typography>
+            </Box>
           </Box>
         </DialogTitle>
         <DialogContent>
-          {isDetailLoading && <Box sx={{display: 'flex', justifyContent: 'center', my:5}}><CircularProgress /></Box>}
-          {!isDetailLoading && !detailedCustomerData && <Typography>No details available for this customer.</Typography>}
-          {!isDetailLoading && detailedCustomerData && (
+          {selectedCustomer && (
             <Box>
-              <Paper sx={{ p: 2, mb: 2, bgcolor: "#f8f9fa" }}>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={3} sx={{ textAlign: 'center' }}>
-                    <Avatar sx={{ width: 80, height: 80, mx: "auto", mb: 1, bgcolor: "#1976d2" }}><PersonIcon sx={{ fontSize: 40 }} /></Avatar>
-                    <Typography variant="h6">{detailedCustomerData.first_name} {detailedCustomerData.last_name}</Typography>
-                    <Chip label={detailedCustomerData.is_active ? "Active" : "Inactive"} color={getStatusChipColor(detailedCustomerData.is_active)} size="small" />
-                  </Grid>
-                  <Grid item xs={12} sm={9}>
-                    <Typography variant="subtitle1" gutterBottom><strong>Username:</strong> {detailedCustomerData.username}</Typography>
-                    <Typography variant="subtitle1" gutterBottom><strong>Email:</strong> {detailedCustomerData.email}</Typography>
-                    <Typography variant="subtitle1" gutterBottom><strong>Phone:</strong> {detailedCustomerData.phone || "N/A"}</Typography>
-                    <Typography variant="subtitle1" gutterBottom><strong>Joined:</strong> {new Date(detailedCustomerData.created_at).toLocaleDateString()}</Typography>
-                    <Typography variant="subtitle1" gutterBottom><strong>Total Orders:</strong> {detailedCustomerData.orderStats?.total_orders || 0}</Typography>
-                    <Typography variant="subtitle1" gutterBottom><strong>Total Spent:</strong> {formatCurrency(detailedCustomerData.orderStats?.total_spent)}</Typography>
-                    <Typography variant="subtitle1"><strong>Cashback Balance:</strong> {formatCurrency(detailedCustomerData.walletBalance)}</Typography>
-                  </Grid>
+              {/* Customer Info */}
+              <Grid container spacing={3} sx={{ mb: 3 }}>
+                <Grid item xs={12} md={6}>
+                  <Paper sx={{ p: 3 }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: "#1976d2" }}>
+                      Customer Information
+                    </Typography>
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <EmailIcon />
+                        <Typography>{selectedCustomer.email}</Typography>
+                      </Box>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <PhoneIcon />
+                        <Typography>{selectedCustomer.phone}</Typography>
+                      </Box>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <LocationIcon />
+                        <Typography>{selectedCustomer.location}</Typography>
+                      </Box>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <WalletIcon />
+                        <Typography>Wallet: {formatCurrency(selectedCustomer.walletBalance)}</Typography>
+                      </Box>
+                    </Box>
+                  </Paper>
                 </Grid>
-              </Paper>
+                <Grid item xs={12} md={6}>
+                  <Paper sx={{ p: 3 }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: "#1976d2" }}>
+                      Account Summary
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          Total Orders
+                        </Typography>
+                        <Typography variant="h6">{selectedCustomer.totalOrders}</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          Total Spent
+                        </Typography>
+                        <Typography variant="h6">{formatCurrency(selectedCustomer.totalSpent)}</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          Cashback Earned
+                        </Typography>
+                        <Typography variant="h6">{formatCurrency(selectedCustomer.cashbackEarned)}</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          Last Login
+                        </Typography>
+                        <Typography variant="body2">
+                          {new Date(selectedCustomer.lastLogin).toLocaleDateString()}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                </Grid>
+              </Grid>
 
-              <Tabs value={detailsTabValue} onChange={(event, newValue) => setDetailsTabValue(newValue)} aria-label="customer details tabs">
-                <Tab label="Overview" icon={<PersonIcon />} iconPosition="start" />
-                <Tab label="Transactions" icon={<CreditCardIcon />} iconPosition="start" />
-                <Tab label="Cashbacks" icon={<MonetizationOnIcon />} iconPosition="start" />
-              </Tabs>
+              {/* Tabs for detailed information */}
+              <Paper>
+                <Tabs value={tabValue} onChange={handleTabChange} aria-label="customer details tabs">
+                  <Tab icon={<HistoryIcon />} label="Transaction History" />
+                  <Tab icon={<CashbackIcon />} label="Cashback Details" />
+                </Tabs>
 
-              <TabPanel value={detailsTabValue} index={0}>
-                <Typography variant="h6" sx={{ mb: 2 }}>Customer Overview</Typography>
-                <Typography>Detailed overview of customer activity, preferences, and additional metrics will be displayed here.</Typography>
-                {/* Additional details like KRA PIN, Company Name if available */}
-                {detailedCustomerData.company_name && <Typography><strong>Company:</strong> {detailedCustomerData.company_name}</Typography>}
-                {detailedCustomerData.kra_pin && <Typography><strong>KRA PIN:</strong> {detailedCustomerData.kra_pin}</Typography>}
-              </TabPanel>
-
-              <TabPanel value={detailsTabValue} index={1}>
-                <Typography variant="h6" sx={{ mb: 2 }}>Recent Transactions (Orders)</Typography>
-                {detailedCustomerData.recentOrders && detailedCustomerData.recentOrders.length > 0 ? (
-                  <TableContainer component={Paper} sx={{ mt: 2 }}>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Order #</TableCell>
-                          <TableCell>Date</TableCell>
-                          <TableCell>Amount</TableCell>
-                          <TableCell>Status</TableCell>
-                          <TableCell>Payment Status</TableCell>
-                          <TableCell>Cashback</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {detailedCustomerData.recentOrders.map(order => (
-                          <TableRow key={order.id}>
-                            <TableCell>{order.order_number}</TableCell>
-                            <TableCell>{new Date(order.order_date).toLocaleDateString()}</TableCell>
-                            <TableCell>{formatCurrency(order.total_amount)}</TableCell>
-                            <TableCell><Chip label={order.status} size="small" /></TableCell>
-                            <TableCell><Chip label={order.payment_status} size="small" /></TableCell>
-                            <TableCell>{formatCurrency(order.cashback_amount)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                ) : <Typography>No recent transactions to display.</Typography>}
-              </TabPanel>
-
-              <TabPanel value={detailsTabValue} index={2}>
-                <Typography variant="h6" sx={{ mb: 2 }}>Recent Cashback Activity</Typography>
-                {detailedCustomerData.recentCashbackTransactions && detailedCustomerData.recentCashbackTransactions.length > 0 ? (
-                  <TableContainer component={Paper} sx={{ mt: 2 }}>
-                    <Table size="small">
+                <TabPanel value={tabValue} index={0}>
+                  <TableContainer>
+                    <Table>
                       <TableHead>
                         <TableRow>
                           <TableCell>Date</TableCell>
                           <TableCell>Type</TableCell>
                           <TableCell>Description</TableCell>
                           <TableCell>Amount</TableCell>
-                          <TableCell>Balance After</TableCell>
+                          <TableCell>Status</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {detailedCustomerData.recentCashbackTransactions.map(cb => (
-                          <TableRow key={cb.id}>
-                            <TableCell>{new Date(cb.created_at).toLocaleDateString()}</TableCell>
-                            <TableCell>{cb.transaction_type}</TableCell>
-                            <TableCell>{cb.description || cb.reference_type || 'N/A'}</TableCell>
-                            <TableCell sx={{color: cb.amount > 0 ? 'green' : 'red'}}>{formatCurrency(cb.amount)}</TableCell>
-                            <TableCell>{formatCurrency(cb.balance_after)}</TableCell>
+                        {selectedCustomer.transactions.map((transaction) => (
+                          <TableRow key={transaction.id}>
+                            <TableCell>{new Date(transaction.date).toLocaleDateString()}</TableCell>
+                            <TableCell>
+                              <Chip
+                                label={transaction.type}
+                                color={transaction.type === "purchase" ? "primary" : "success"}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>{transaction.description}</TableCell>
+                            <TableCell>{formatCurrency(transaction.amount)}</TableCell>
+                            <TableCell>
+                              <Chip label={transaction.status} color="success" size="small" />
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
                   </TableContainer>
-                ) : <Typography>No cashback history to display.</Typography>}
-              </TabPanel>
+                </TabPanel>
+
+                <TabPanel value={tabValue} index={1}>
+                  <TableContainer>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Date</TableCell>
+                          <TableCell>Order Amount</TableCell>
+                          <TableCell>Cashback Rate</TableCell>
+                          <TableCell>Cashback Amount</TableCell>
+                          <TableCell>Status</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {selectedCustomer.cashbackHistory.map((cashback) => (
+                          <TableRow key={cashback.id}>
+                            <TableCell>{new Date(cashback.date).toLocaleDateString()}</TableCell>
+                            <TableCell>{formatCurrency(cashback.orderAmount)}</TableCell>
+                            <TableCell>{cashback.cashbackRate}%</TableCell>
+                            <TableCell>{formatCurrency(cashback.cashbackAmount)}</TableCell>
+                            <TableCell>
+                              <Chip label={cashback.status} color="success" size="small" />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </TabPanel>
+              </Paper>
             </Box>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDetailsOpen(false)}>Close</Button>
+          <Button onClick={() => setViewDialogOpen(false)}>Close</Button>
+          <Button
+            variant="contained"
+            color={selectedCustomer?.status === "active" ? "error" : "success"}
+            onClick={() => {
+              handleStatusToggle(selectedCustomer.id, selectedCustomer.status)
+              setViewDialogOpen(false)
+            }}
+          >
+            {selectedCustomer?.status === "active" ? "Disable Customer" : "Enable Customer"}
+          </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Notification Snackbar */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={() => setNotification({ ...notification, open: false })}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <Alert
+          onClose={() => setNotification({ ...notification, open: false })}
+          severity={notification.severity}
+          sx={{ width: "100%" }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Box>
   )
 }
 
-export default CustomerManagement;
+export default CustomerManagement

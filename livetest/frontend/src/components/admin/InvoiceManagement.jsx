@@ -54,7 +54,7 @@ import {
   AttachMoney as MoneyIcon,
 } from "@mui/icons-material"
 import InvoiceForm from "./InvoiceForm"
-import firstCraftLogo from "../../../assets/images/FirstCraft-logo.png" // Import the logo
+import firstCraftLogo from "../../assets/images/FirstCraft-logo.png" // Import the logo
 
 // Define print styles
 const printStyles = `
