@@ -26,6 +26,8 @@ import supplierRoutes from "./routes/suppliers.js"
 import salesAgentRoutes from "./routes/salesAgent.js"
 import userRoutes from "./routes/users.js"
 import uploadRoutes from "./routes/upload.js"
+import cmsRoutes from './routes/cms.js'; // adjust path if needed
+
 
 const app = express()
 
