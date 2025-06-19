@@ -1,3 +1,6 @@
+console.log("💡 This is the real server.js file");
+
+
 import express from "express"
 import cors from "cors"
 import compression from "compression"

@@ -1,11 +1,10 @@
-import { CMSService } from "../services/cmsService.js"
+import { CMSService } from "../services/cmsService.js";
 
 // CMS Controller for managing content and navigation
-export const cmsController = {
+const cmsController = {
   // Get navigation menu structure
   getNavigation: async (req, res) => {
     try {
-      // Default navigation structure
       const navigation = {
         mainMenu: [
           { id: 1, name: "Home", path: "/", active: true },
@@ -21,50 +20,47 @@ export const cmsController = {
           { id: 4, name: "Users", path: "/admin/users", icon: "users" },
           { id: 5, name: "Settings", path: "/admin/settings", icon: "settings" },
         ],
-      }
+      };
 
       res.json({
         success: true,
         data: navigation,
-      })
+      });
     } catch (error) {
-      console.error("Error fetching navigation:", error)
+      console.error("Error fetching navigation:", error);
       res.status(500).json({
         success: false,
         message: "Failed to fetch navigation",
         error: error.message,
-      })
+      });
     }
   },
 
   // Update navigation structure
   updateNavigation: async (req, res) => {
     try {
-      const { mainMenu, adminMenu } = req.body
+      const { mainMenu, adminMenu } = req.body;
 
-      // In a real app, you'd save this to database
-      // For now, just return success
       res.json({
         success: true,
         message: "Navigation updated successfully",
         data: { mainMenu, adminMenu },
-      })
+      });
     } catch (error) {
-      console.error("Error updating navigation:", error)
+      console.error("Error updating navigation:", error);
       res.status(500).json({
         success: false,
         message: "Failed to update navigation",
         error: error.message,
-      })
+      });
     }
   },
 
   // Get content by type
   getContent: async (req, res) => {
     try {
-      const { type } = req.params
+      const { type } = req.params;
 
-      // Default content based on type
       const contentMap = {
         homepage: {
           hero: {
@@ -91,43 +87,42 @@ export const cmsController = {
           address: "Nairobi, Kenya",
           hours: "Mon-Fri: 9AM-6PM",
         },
-      }
+      };
 
-      const content = contentMap[type] || {}
+      const content = contentMap[type] || {};
 
       res.json({
         success: true,
         data: content,
-      })
+      });
     } catch (error) {
-      console.error("Error fetching content:", error)
+      console.error("Error fetching content:", error);
       res.status(500).json({
         success: false,
         message: "Failed to fetch content",
         error: error.message,
-      })
+      });
     }
   },
 
   // Update content
   updateContent: async (req, res) => {
     try {
-      const { type } = req.params
-      const content = req.body
+      const { type } = req.params;
+      const content = req.body;
 
-      // In a real app, you'd save this to database
       res.json({
         success: true,
         message: `${type} content updated successfully`,
         data: content,
-      })
+      });
     } catch (error) {
-      console.error("Error updating content:", error)
+      console.error("Error updating content:", error);
       res.status(500).json({
         success: false,
         message: "Failed to update content",
         error: error.message,
-      })
+      });
     }
   },
 
@@ -146,40 +141,39 @@ export const cmsController = {
         allowRegistration: true,
         emailNotifications: true,
         smsNotifications: false,
-      }
+      };
 
       res.json({
         success: true,
         data: settings,
-      })
+      });
     } catch (error) {
-      console.error("Error fetching settings:", error)
+      console.error("Error fetching settings:", error);
       res.status(500).json({
         success: false,
         message: "Failed to fetch settings",
         error: error.message,
-      })
+      });
     }
   },
 
   // Update site settings
   updateSettings: async (req, res) => {
     try {
-      const settings = req.body
+      const settings = req.body;
 
-      // In a real app, you'd save this to database
       res.json({
         success: true,
         message: "Settings updated successfully",
         data: settings,
-      })
+      });
     } catch (error) {
-      console.error("Error updating settings:", error)
+      console.error("Error updating settings:", error);
       res.status(500).json({
         success: false,
         message: "Failed to update settings",
         error: error.message,
-      })
+      });
     }
   },
 
@@ -205,88 +199,85 @@ export const cmsController = {
           active: true,
           order: 2,
         },
-      ]
+      ];
 
       res.json({
         success: true,
         data: banners,
-      })
+      });
     } catch (error) {
-      console.error("Error fetching banners:", error)
+      console.error("Error fetching banners:", error);
       res.status(500).json({
         success: false,
         message: "Failed to fetch banners",
         error: error.message,
-      })
+      });
     }
   },
 
   // Create banner
   createBanner: async (req, res) => {
     try {
-      const banner = req.body
+      const banner = req.body;
 
-      // In a real app, you'd save this to database
       const newBanner = {
         id: Date.now(),
         ...banner,
         createdAt: new Date().toISOString(),
-      }
+      };
 
       res.status(201).json({
         success: true,
         message: "Banner created successfully",
         data: newBanner,
-      })
+      });
     } catch (error) {
-      console.error("Error creating banner:", error)
+      console.error("Error creating banner:", error);
       res.status(500).json({
         success: false,
         message: "Failed to create banner",
         error: error.message,
-      })
+      });
     }
   },
 
   // Update banner
   updateBanner: async (req, res) => {
     try {
-      const { id } = req.params
-      const banner = req.body
+      const { id } = req.params;
+      const banner = req.body;
 
-      // In a real app, you'd update this in database
       res.json({
         success: true,
         message: "Banner updated successfully",
         data: { id: Number.parseInt(id), ...banner },
-      })
+      });
     } catch (error) {
-      console.error("Error updating banner:", error)
+      console.error("Error updating banner:", error);
       res.status(500).json({
         success: false,
         message: "Failed to update banner",
         error: error.message,
-      })
+      });
     }
   },
 
   // Delete banner
   deleteBanner: async (req, res) => {
     try {
-      const { id } = req.params
+      const { id } = req.params;
 
-      // In a real app, you'd delete this from database
       res.json({
         success: true,
         message: "Banner deleted successfully",
-      })
+      });
     } catch (error) {
-      console.error("Error deleting banner:", error)
+      console.error("Error deleting banner:", error);
       res.status(500).json({
         success: false,
         message: "Failed to delete banner",
         error: error.message,
-      })
+      });
     }
   },
 
@@ -317,45 +308,43 @@ export const cmsController = {
           activeCustomers: 1234,
           totalSales: 1200000,
         },
-      }
+      };
 
       res.json({
         success: true,
         data: homepageContent,
-      })
+      });
     } catch (error) {
-      console.error("Error fetching homepage content:", error)
+      console.error("Error fetching homepage content:", error);
       res.status(500).json({
         success: false,
         message: "Failed to fetch homepage content",
         error: error.message,
-      })
+      });
     }
   },
 
   // Update homepage content
   updateHomepageContent: async (req, res) => {
     try {
-      const content = req.body
+      const content = req.body;
 
-      // In a real app, you'd save this to database
       res.json({
         success: true,
         message: "Homepage content updated successfully",
         data: content,
-      })
+      });
     } catch (error) {
-      console.error("Error updating homepage content:", error)
+      console.error("Error updating homepage content:", error);
       res.status(500).json({
         success: false,
         message: "Failed to update homepage content",
         error: error.message,
-      })
+      });
     }
   },
-}
+};
 
-
-export { cmsController };   // named export
-export default cmsController
-
+// ✅ Clean Pattern A: named + default exports
+export { cmsController };
+export default cmsController;
