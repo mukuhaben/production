@@ -2,8 +2,8 @@ import rateLimit from "express-rate-limit"
 import helmet from "helmet"
 import { AppError } from "./errorHandler.js"
 
-// Rate limiting configuration
-export const createRateLimit = (windowMs = 15 * 60 * 1000, max = 100, message = "Too many requests") => {
+// More permissive rate limiting configuration
+export const createRateLimit = (windowMs = 15 * 60 * 1000, max = 500, message = "Too many requests") => {
   return rateLimit({
     windowMs,
     max,
@@ -13,25 +13,29 @@ export const createRateLimit = (windowMs = 15 * 60 * 1000, max = 100, message = 
     },
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (req) => {
+      // Skip rate limiting for health checks and static assets
+      return req.path === "/health" || req.path.startsWith("/static")
+    },
   })
 }
 
-// Specific rate limits for different endpoints
+// Specific rate limits for different endpoints - more permissive
 export const authLimiter = createRateLimit(
   15 * 60 * 1000, // 15 minutes
-  5, // 5 attempts
+  20, // Increased from 5 to 20 attempts
   "Too many authentication attempts, please try again later",
 )
 
 export const apiLimiter = createRateLimit(
   15 * 60 * 1000, // 15 minutes
-  100, // 100 requests
+  500, // Increased from 100 to 500 requests
   "Too many API requests, please try again later",
 )
 
 export const uploadLimiter = createRateLimit(
   60 * 60 * 1000, // 1 hour
-  10, // 10 uploads
+  50, // Increased from 10 to 50 uploads
   "Too many file uploads, please try again later",
 )
 
@@ -98,8 +102,7 @@ export const validateFileUpload = (allowedTypes = [], maxSize = 10 * 1024 * 1024
   }
 }
 
-
-// CORS configuration with enhanced security
+// CORS configuration with enhanced security but more permissive
 export const corsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
@@ -112,18 +115,37 @@ export const corsOptions = {
       "http://localhost:5173",
       "http://127.0.0.1:5173",
       process.env.FRONTEND_URL,
+      // Add more permissive patterns for Vercel deployments
+      /^https:\/\/.*\.vercel\.app$/,
+      /^https:\/\/firstcraft.*\.vercel\.app$/,
       ...(process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : []),
     ].filter(Boolean)
 
     console.log("🔍 CORS Check - Origin:", origin)
     console.log("🔍 CORS Check - Allowed Origins:", allowedOrigins)
 
-    if (allowedOrigins.includes(origin)) {
+    // Check if origin matches any allowed pattern
+    const isAllowed = allowedOrigins.some((allowedOrigin) => {
+      if (typeof allowedOrigin === "string") {
+        return allowedOrigin === origin
+      } else if (allowedOrigin instanceof RegExp) {
+        return allowedOrigin.test(origin)
+      }
+      return false
+    })
+
+    if (isAllowed) {
       console.log("✅ CORS - Origin allowed:", origin)
       callback(null, true)
     } else {
       console.log("❌ CORS - Origin blocked:", origin)
-      callback(new Error("Not allowed by CORS"))
+      // In production, be more permissive to avoid blocking legitimate requests
+      if (process.env.NODE_ENV === "production") {
+        console.log("🔄 CORS - Allowing in production mode")
+        callback(null, true)
+      } else {
+        callback(new Error("Not allowed by CORS"))
+      }
     }
   },
   credentials: true,

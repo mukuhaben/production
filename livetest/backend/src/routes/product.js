@@ -1,6 +1,6 @@
 import express from "express"
 import { query, transaction } from "../config/database.js"
-import { verifyToken, requireAdmin } from "../middlewares/auth.js"
+import { verifyToken, requireAdmin, rateLimit } from "../middlewares/auth.js"
 import { validate, schemas } from "../middlewares/validation.js"
 import ProductController from "../controllers/product.js" // Import ProductController
 
@@ -177,71 +177,76 @@ router.get("/:id", validate(schemas.uuidParam, "params"), async (req, res) => {
 })
 
 // Create new product (Admin only)
-router.post("/", verifyToken, requireAdmin, async (req, res) => {
-  try {
-    const {
-      productName,
-      productCode,
-      description,
-      longerDescription,
-      categoryId,
-      subcategoryId,
-      costPrice,
-      vatRate,
-      stockUnits,
-      alertQuantity,
-      unitOfMeasure,
-      packSize,
-      productBarcode,
-      etimsRefCode,
-      expiryDate,
-      preferredVendor1,
-      preferredVendor2,
-      vendorItemCode,
-      cashbackRate,
-      saCashback1stPurchase,
-      saCashback2ndPurchase,
-      saCashback3rdPurchase,
-      saCashback4thPurchase,
-      reorderLevel,
-      orderLevel,
-      reorderActive,
-      pricingTiers,
-    } = req.body
+router.post(
+  "/",
+  rateLimit(5, 60000), // 5 attempts per minute
+  verifyToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const {
+        productName,
+        productCode,
+        description,
+        longerDescription,
+        categoryId,
+        subcategoryId,
+        costPrice,
+        vatRate,
+        stockUnits,
+        alertQuantity,
+        unitOfMeasure,
+        packSize,
+        productBarcode,
+        etimsRefCode,
+        expiryDate,
+        preferredVendor1,
+        preferredVendor2,
+        vendorItemCode,
+        cashbackRate,
+        saCashback1stPurchase,
+        saCashback2ndPurchase,
+        saCashback3rdPurchase,
+        saCashback4thPurchase,
+        reorderLevel,
+        orderLevel,
+        reorderActive,
+        pricingTiers,
+      } = req.body
 
-    // If categoryId is a string (category name), find the actual ID
-    let actualCategoryId = categoryId
-    let actualSubcategoryId = subcategoryId
+      // If categoryId is a string (category name), find the actual ID
+      let actualCategoryId = categoryId
+      let actualSubcategoryId = subcategoryId
 
-    if (categoryId && typeof categoryId === "string" && isNaN(categoryId)) {
-      const categoryResult = await query("SELECT id FROM categories WHERE name = $1", [categoryId])
-      if (categoryResult.rows.length > 0) {
-        actualCategoryId = categoryResult.rows[0].id
+      if (categoryId && typeof categoryId === "string" && isNaN(categoryId)) {
+        const categoryResult = await query("SELECT id FROM categories WHERE name = $1", [categoryId])
+        if (categoryResult.rows.length > 0) {
+          actualCategoryId = categoryResult.rows[0].id
+        }
       }
-    }
 
-    if (subcategoryId && typeof subcategoryId === "string" && isNaN(subcategoryId)) {
-      const subcategoryResult = await query("SELECT id FROM categories WHERE name = $1", [subcategoryId])
-      if (subcategoryResult.rows.length > 0) {
-        actualSubcategoryId = subcategoryResult.rows[0].id
+      if (subcategoryId && typeof subcategoryId === "string" && isNaN(subcategoryId)) {
+        const subcategoryResult = await query("SELECT id FROM categories WHERE name = $1", [subcategoryId])
+        if (subcategoryResult.rows.length > 0) {
+          actualSubcategoryId = subcategoryResult.rows[0].id
+        }
       }
-    }
 
-    // Check if product code already exists
-    const existingProduct = await query("SELECT id FROM products WHERE product_code = $1", [productCode])
+      // Check if product code already exists
+      const existingProduct = await query("SELECT id FROM products WHERE product_code = $1", [productCode])
 
-    if (existingProduct.rows.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Product code already exists",
-      })
-    }
+      if (existingProduct.rows.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Product code already exists",
+        })
+      }
 
-    // Start transaction
-    const result = await transaction(async (client) => {
-      // Insert product with the resolved category IDs
-      const productResult = await client.query(
-        `
+      // Start transaction
+      const result = await transaction(async (client) => {
+        // Insert product with the resolved category IDs
+        const productResult = await client.query(
+          `
         INSERT INTO products (
           product_name, product_code, description, longer_description,
           category_id, subcategory_id, cost_price, vat_rate, stock_units,
@@ -255,90 +260,91 @@ router.post("/", verifyToken, requireAdmin, async (req, res) => {
           $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27
         ) RETURNING id
       `,
-        [
-          productName,
-          productCode,
-          description,
-          longerDescription,
-          actualCategoryId,
-          actualSubcategoryId,
-          costPrice,
-          vatRate,
-          stockUnits,
-          alertQuantity,
-          unitOfMeasure,
-          packSize,
-          productBarcode,
-          etimsRefCode,
-          expiryDate,
-          preferredVendor1,
-          preferredVendor2,
-          vendorItemCode,
-          cashbackRate,
-          saCashback1stPurchase || 6,
-          saCashback2ndPurchase || 4,
-          saCashback3rdPurchase || 3,
-          saCashback4thPurchase || 2,
-          reorderLevel,
-          orderLevel,
-          reorderActive !== false,
-          req.user.id,
-        ],
-      )
+          [
+            productName,
+            productCode,
+            description,
+            longerDescription,
+            actualCategoryId,
+            actualSubcategoryId,
+            costPrice,
+            vatRate,
+            stockUnits,
+            alertQuantity,
+            unitOfMeasure,
+            packSize,
+            productBarcode,
+            etimsRefCode,
+            expiryDate,
+            preferredVendor1,
+            preferredVendor2,
+            vendorItemCode,
+            cashbackRate,
+            saCashback1stPurchase || 6,
+            saCashback2ndPurchase || 4,
+            saCashback3rdPurchase || 3,
+            saCashback4thPurchase || 2,
+            reorderLevel,
+            orderLevel,
+            reorderActive !== false,
+            req.user.id,
+          ],
+        )
 
-      const productId = productResult.rows[0].id
+        const productId = productResult.rows[0].id
 
-      // Insert pricing tiers
-      if (pricingTiers && pricingTiers.length > 0) {
-        for (const tier of pricingTiers) {
-          await client.query(
-            `
+        // Insert pricing tiers
+        if (pricingTiers && pricingTiers.length > 0) {
+          for (const tier of pricingTiers) {
+            await client.query(
+              `
             INSERT INTO product_pricing_tiers (
               product_id, tier_name, min_quantity, max_quantity, selling_price
             ) VALUES ($1, $2, $3, $4, $5)
           `,
-            [productId, tier.tierName, tier.minQuantity, tier.maxQuantity, tier.sellingPrice],
-          )
+              [productId, tier.tierName, tier.minQuantity, tier.maxQuantity, tier.sellingPrice],
+            )
+          }
         }
-      }
 
-      // Record initial inventory movement
-      await client.query(
-        `
+        // Record initial inventory movement
+        await client.query(
+          `
         INSERT INTO inventory_movements (
           product_id, movement_type, quantity, reference_type, notes, created_by
         ) VALUES ($1, 'in', $2, 'initial_stock', 'Initial stock entry', $3)
       `,
-        [productId, stockUnits, req.user.id],
-      )
+          [productId, stockUnits, req.user.id],
+        )
 
-      return productId
-    })
+        return productId
+      })
 
-    res.status(201).json({
-      success: true,
-      message: "Product created successfully",
-      data: {
-        productId: result,
-      },
-    })
-  } catch (error) {
-    console.error("Create product error:", error)
+      res.status(201).json({
+        success: true,
+        message: "Product created successfully",
+        data: {
+          productId: result,
+        },
+      })
+    } catch (error) {
+      console.error("Create product error:", error)
 
-    if (error.code === "23505") {
-      // Unique constraint violation
-      return res.status(400).json({
+      if (error.code === "23505") {
+        // Unique constraint violation
+        return res.status(400).json({
+          success: false,
+          message: "Product code already exists",
+        })
+      }
+
+      res.status(500).json({
         success: false,
-        message: "Product code already exists",
+        message: "Failed to create product",
       })
     }
-
-    res.status(500).json({
-      success: false,
-      message: "Failed to create product",
-    })
-  }
-})
+  },
+)
 
 // Bulk Import Products (Admin only)
 router.post("/bulk-import", verifyToken, requireAdmin, ProductController.bulkImportProducts)

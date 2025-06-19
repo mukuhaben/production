@@ -1,10 +1,13 @@
 import axios from "axios"
 
-// Create axios instance
+// Create axios instance with better error handling
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "https://firstcraft-backend-q68n.onrender.com/api",
-  timeout: 60000,
+  timeout: 120000, // Increased timeout for Render cold starts
   withCredentials: true,
+  headers: {
+    "Content-Type": "application/json",
+  },
 })
 
 // Request interceptor to add auth token
@@ -17,11 +20,12 @@ api.interceptors.request.use(
     return config
   },
   (error) => {
+    console.error("Request interceptor error:", error)
     return Promise.reject(error)
   },
 )
 
-// Response interceptor to handle errors
+// Response interceptor with better error handling
 api.interceptors.response.use(
   (response) => {
     return response
@@ -29,6 +33,20 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
 
+    // Handle network errors
+    if (!error.response) {
+      console.error("Network error:", error.message)
+      return Promise.reject(new Error("Network connection failed. Please check your internet connection."))
+    }
+
+    // Handle rate limiting
+    if (error.response?.status === 429) {
+      console.warn("Rate limit exceeded, waiting before retry...")
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+      return api(originalRequest)
+    }
+
+    // Handle authentication errors
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
 
@@ -39,10 +57,11 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${token}`
         return api(originalRequest)
       } catch (refreshError) {
+        console.error("Token refresh failed:", refreshError)
         localStorage.removeItem("token")
         localStorage.removeItem("user")
-        window.location.href = "/login"
-        return Promise.reject(refreshError)
+        // Don't redirect immediately, let the component handle it
+        return Promise.reject(error)
       }
     }
 

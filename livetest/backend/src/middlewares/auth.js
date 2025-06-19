@@ -1,7 +1,42 @@
 import jwt from "jsonwebtoken"
 import { query } from "../config/database.js"
 
-// Verify JWT token
+// Rate limiting store (in production, use Redis)
+const rateLimitStore = new Map()
+
+// Rate limiting middleware
+const rateLimit = (maxAttempts = 10, windowMs = 15 * 60 * 1000) => {
+  return (req, res, next) => {
+    const key = req.ip || req.connection.remoteAddress
+    const now = Date.now()
+
+    if (!rateLimitStore.has(key)) {
+      rateLimitStore.set(key, { count: 1, resetTime: now + windowMs })
+      return next()
+    }
+
+    const record = rateLimitStore.get(key)
+
+    if (now > record.resetTime) {
+      record.count = 1
+      record.resetTime = now + windowMs
+      return next()
+    }
+
+    if (record.count >= maxAttempts) {
+      return res.status(429).json({
+        success: false,
+        message: "Too many requests. Please try again later.",
+        retryAfter: Math.ceil((record.resetTime - now) / 1000),
+      })
+    }
+
+    record.count++
+    next()
+  }
+}
+
+// Verify JWT token with better error handling
 const verifyToken = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization
@@ -10,12 +45,38 @@ const verifyToken = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: "Access token required",
+        code: "TOKEN_MISSING",
       })
     }
 
     const token = authHeader.substring(7)
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid token format",
+        code: "TOKEN_INVALID",
+      })
+    }
+
+    let decoded
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET)
+    } catch (jwtError) {
+      if (jwtError.name === "TokenExpiredError") {
+        return res.status(401).json({
+          success: false,
+          message: "Token expired",
+          code: "TOKEN_EXPIRED",
+        })
+      }
+
+      return res.status(401).json({
+        success: false,
+        message: "Invalid token",
+        code: "TOKEN_INVALID",
+      })
+    }
 
     // Get user from database
     const result = await query("SELECT id, username, email, user_type, is_active FROM users WHERE id = $1", [
@@ -26,6 +87,7 @@ const verifyToken = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: "User not found",
+        code: "USER_NOT_FOUND",
       })
     }
 
@@ -35,30 +97,18 @@ const verifyToken = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: "Account is deactivated",
+        code: "ACCOUNT_DEACTIVATED",
       })
     }
 
     req.user = user
     next()
   } catch (error) {
-    if (error.name === "JsonWebTokenError") {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid token",
-      })
-    }
-
-    if (error.name === "TokenExpiredError") {
-      return res.status(401).json({
-        success: false,
-        message: "Token expired",
-      })
-    }
-
     console.error("Auth middleware error:", error)
     res.status(500).json({
       success: false,
       message: "Authentication error",
+      code: "AUTH_ERROR",
     })
   }
 }
@@ -95,4 +145,4 @@ const requireSalesAgentOrAdmin = requireRole(["sales_agent", "admin"])
 // Customer, sales agent, or admin middleware
 const requireAuthenticated = requireRole(["customer", "sales_agent", "admin"])
 
-export { verifyToken, requireRole, requireAdmin, requireSalesAgentOrAdmin, requireAuthenticated }
+export { verifyToken, requireRole, requireAdmin, requireSalesAgentOrAdmin, requireAuthenticated, rateLimit }

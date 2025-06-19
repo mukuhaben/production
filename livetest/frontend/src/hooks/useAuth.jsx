@@ -4,8 +4,7 @@ import { useState, useEffect, useCallback, createContext, useContext } from "rea
 import { authAPI } from "../services/api"
 import toast from "react-hot-toast"
 
-import { productsAPI, categoriesAPI, cmsAPI } from '../services/api'
-
+import { productsAPI, categoriesAPI, cmsAPI } from "../services/api"
 
 const AuthContext = createContext()
 
@@ -165,21 +164,35 @@ export const AuthProvider = ({ children }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-// Custom hook for data fetching with error handling
+// Custom hook for data fetching with enhanced error handling
 export const useApiData = (apiCall, dependencies = []) => {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (retryCount = 0) => {
     try {
       setLoading(true)
       setError(null)
       const response = await apiCall()
       setData(response.data)
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch data')
-      console.error('API Error:', err)
+      console.error("API Error:", err)
+
+      // Retry logic for network errors
+      if (retryCount < 2 && (!err.response || err.response.status >= 500)) {
+        console.log(`Retrying API call (attempt ${retryCount + 1})...`)
+        setTimeout(() => fetchData(retryCount + 1), 1000 * (retryCount + 1))
+        return
+      }
+
+      const errorMessage = err.response?.data?.message || err.message || "Failed to fetch data"
+      setError(errorMessage)
+
+      // Set empty data for graceful degradation
+      if (err.response?.status >= 500 || !err.response) {
+        setData({ data: [], success: false, message: errorMessage })
+      }
     } finally {
       setLoading(false)
     }
