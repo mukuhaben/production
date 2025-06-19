@@ -73,6 +73,10 @@ app.get("/health", (req, res) => {
   })
 })
 
+app.get('/', (req, res)=>{
+  res.json({message: "Welcome to firstcraft."});
+});
+
 // API Routes
 app.use("/api/auth", authRoutes)
 app.use("/api/products", productRoutes)

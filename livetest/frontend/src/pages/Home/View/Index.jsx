@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Box } from "@mui/material";
 import HeroSection from "../HeroSection";
-{/* import Offer1 from "../Offer1"; // Adjust the import path as necessary  */}
 import ProductCategories from "../ProductCategories";
 import SupplierQuoteRequest from "../SupplierQuoteRequest";
 import NewsletterSubscription from "../../../components/NewsLetter";
@@ -109,13 +108,7 @@ function HomePage() {
   return (
     <Box>
       <HeroSection />
-      {/* <Offer1 /> */}
-      <ProductCategories header={'Featured Products'}/>
-      {/* <SupplierQuoteRequest /> */}
-      {/* <Offer1 /> */}
-      <ProductCategories header={'Office Products'}/>
-      <ProductCategories header={'Office Machines'}/>
-      <ProductCategories header={'Office Essentials'}/>
+      <ProductCategories />
       <NewsletterSubscription />
     </Box>
   );

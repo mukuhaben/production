@@ -9,38 +9,39 @@ const router = express.Router()
 router.get("/", async (req, res) => {
   try {
     const query = `
-      WITH RECURSIVE category_tree AS (
-        -- Base case: root categories
-        SELECT 
-          id, name, description, parent_id, slug, image_url, 
-          is_active, sort_order, created_at, updated_at,
-          0 as level,
-          ARRAY[sort_order, id::text] as path
-        FROM categories 
-        WHERE parent_id IS NULL AND is_active = true
-        
-        UNION ALL
-        
-        -- Recursive case: subcategories
-        SELECT 
-          c.id, c.name, c.description, c.parent_id, c.slug, c.image_url,
-          c.is_active, c.sort_order, c.created_at, c.updated_at,
-          ct.level + 1,
-          ct.path || ARRAY[c.sort_order, c.id::text]
-        FROM categories c
-        JOIN category_tree ct ON c.parent_id = ct.id
-        WHERE c.is_active = true
-      )
-      SELECT 
-        ct.*,
-        COUNT(p.id) as product_count
-      FROM category_tree ct
-      LEFT JOIN products p ON ct.id = p.category_id AND p.is_active = true
-      GROUP BY ct.id, ct.name, ct.description, ct.parent_id, ct.slug, 
-               ct.image_url, ct.is_active, ct.sort_order, ct.created_at, 
-               ct.updated_at, ct.level, ct.path
-      ORDER BY ct.path
-    `
+  WITH RECURSIVE category_tree AS (
+    -- Base case: root categories
+    SELECT 
+      id, name, description, parent_id, slug, image_url, 
+      is_active, sort_order, created_at, updated_at,
+      0 as level,
+      ARRAY[sort_order::text, id::text] as path
+    FROM categories 
+    WHERE parent_id IS NULL AND is_active = true
+
+    UNION ALL
+
+    -- Recursive case: subcategories
+    SELECT 
+      c.id, c.name, c.description, c.parent_id, c.slug, c.image_url,
+      c.is_active, c.sort_order, c.created_at, c.updated_at,
+      ct.level + 1,
+      ct.path || ARRAY[c.sort_order::text, c.id::text]
+    FROM categories c
+    JOIN category_tree ct ON c.parent_id = ct.id
+    WHERE c.is_active = true
+  )
+  SELECT 
+    ct.*,
+    COUNT(p.id) as product_count
+  FROM category_tree ct
+  LEFT JOIN products p ON ct.id = p.category_id AND p.is_active = true
+  GROUP BY ct.id, ct.name, ct.description, ct.parent_id, ct.slug, 
+           ct.image_url, ct.is_active, ct.sort_order, ct.created_at, 
+           ct.updated_at, ct.level, ct.path
+  ORDER BY ct.path
+`
+
 
     const result = await db.query(query)
 
