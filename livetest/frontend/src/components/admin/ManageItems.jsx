@@ -28,9 +28,9 @@ import {
   Stack,
   CircularProgress,
 } from "@mui/material"
-import { Search, Edit, Delete, Visibility, Add, UploadFile as UploadFileIcon } from "@mui/icons-material" // Added UploadFileIcon
-import { productsAPI } from "../../services/api.js"
-import BulkImportModal from "./BulkImportModal"; // Import BulkImportModal
+import { Search, Edit, Delete, Visibility, Add, UploadFile as UploadFileIcon } from "@mui/icons-material"
+import BulkImportModal from "./BulkImportModal"
+import productService from "../../services/productService.jsx"
 
 export default function ManageItems({ onEditItem, onAddNewItem }) {
   const [items, setItems] = useState([])
@@ -41,15 +41,15 @@ export default function ManageItems({ onEditItem, onAddNewItem }) {
   const [viewDialog, setViewDialog] = useState(false)
   const [successMessage, setSuccessMessage] = useState("")
   const [error, setError] = useState("")
-  const [showBulkImportModal, setShowBulkImportModal] = useState(false);
+  const [showBulkImportModal, setShowBulkImportModal] = useState(false)
 
   const handleOpenBulkImportModal = () => {
-    setShowBulkImportModal(true);
-  };
+    setShowBulkImportModal(true)
+  }
 
   const handleCloseBulkImportModal = () => {
-    setShowBulkImportModal(false);
-  };
+    setShowBulkImportModal(false)
+  }
 
   // Fetch products from backend
   useEffect(() => {
@@ -59,16 +59,21 @@ export default function ManageItems({ onEditItem, onAddNewItem }) {
   const fetchProducts = async () => {
     try {
       setLoading(true)
-      const response = await productsAPI.getAll({
+      console.log("Fetching products with search term:", searchTerm)
+
+      const result = await productService.getProducts({
         page: 1,
         limit: 100,
         search: searchTerm,
       })
 
-      if (response.data.success) {
-        setItems(response.data.data.products)
+      if (result.success) {
+        console.log("Products fetched successfully:", result.data)
+        setItems(result.data.data?.products || result.data.products || [])
+        setError("")
       } else {
-        setError("Failed to fetch products")
+        console.error("Failed to fetch products:", result.error)
+        setError(result.error || "Failed to fetch products")
       }
     } catch (error) {
       console.error("Error fetching products:", error)
@@ -111,11 +116,17 @@ export default function ManageItems({ onEditItem, onAddNewItem }) {
   const confirmDelete = async () => {
     if (selectedItem) {
       try {
-        const response = await productsAPI.delete(selectedItem.id)
-        if (response.data.success) {
+        console.log("Deleting product:", selectedItem.id)
+
+        const result = await productService.deleteProduct(selectedItem.id)
+        if (result.success) {
           setItems(items.filter((item) => item.id !== selectedItem.id))
           setSuccessMessage(`Product "${selectedItem.product_name}" deleted successfully!`)
           setTimeout(() => setSuccessMessage(""), 3000)
+          setError("")
+        } else {
+          console.error("Failed to delete product:", result.error)
+          setError(result.error || "Failed to delete product")
         }
       } catch (error) {
         console.error("Error deleting product:", error)
@@ -192,12 +203,12 @@ export default function ManageItems({ onEditItem, onAddNewItem }) {
             View, edit, and manage your product inventory
           </Typography>
         </Box>
-        <Box> {/* Wrapper for buttons */}
+        <Box>
           <Button
             variant="contained"
             startIcon={<Add />}
             onClick={onAddNewItem}
-            sx={{ // Restoring original sx props for Add New Item button
+            sx={{
               bgcolor: "#1976d2",
               "&:hover": { bgcolor: "#1565c0" },
               textTransform: "none",
@@ -205,16 +216,16 @@ export default function ManageItems({ onEditItem, onAddNewItem }) {
               px: 3,
               py: 1.5,
               borderRadius: 2,
-              mr: 1 // Added margin for spacing
+              mr: 1,
             }}
           >
             Add New Item
           </Button>
           <Button
-            variant="outlined" // Styling for Bulk Import button
+            variant="outlined"
             startIcon={<UploadFileIcon />}
             onClick={handleOpenBulkImportModal}
-            sx={{ // Adding similar styling for consistency
+            sx={{
               textTransform: "none",
               fontWeight: 600,
               px: 3,
@@ -225,23 +236,6 @@ export default function ManageItems({ onEditItem, onAddNewItem }) {
             Bulk Import
           </Button>
         </Box>
-        {/* Old Button Styling, kept for reference if needed, but new one is simpler and inside a Box for layout */}
-        {/* <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={onAddNewItem}
-          sx={{
-            bgcolor: "#1976d2",
-            "&:hover": { bgcolor: "#1565c0" },
-            textTransform: "none",
-            fontWeight: 600,
-            px: 3,
-            py: 1.5,
-            borderRadius: 2,
-          }}
-        >
-          Add New Item
-        </Button> */}
       </Box>
 
       {/* Success Message */}
@@ -329,7 +323,7 @@ export default function ManageItems({ onEditItem, onAddNewItem }) {
                     <TableCell>
                       <Box sx={{ display: "flex", alignItems: "center" }}>
                         <Avatar
-                          src={item.image_url || "/placeholder.svg?height=40&width=40"} // Added fallback placeholder
+                          src={item.image_url || "/placeholder.svg?height=40&width=40"}
                           sx={{
                             mr: 1.5,
                             width: 40,
@@ -514,7 +508,7 @@ export default function ManageItems({ onEditItem, onAddNewItem }) {
                 <Grid item xs={12} md={4}>
                   <Card sx={{ p: 2, textAlign: "center", borderRadius: 2 }}>
                     <img
-                      src={selectedItem.image_url || "/placeholder.svg?height=200&width=250"} // Added fallback placeholder
+                      src={selectedItem.image_url || "/placeholder.svg?height=200&width=250"}
                       alt={selectedItem.product_name}
                       style={{
                         width: "100%",
@@ -593,11 +587,7 @@ export default function ManageItems({ onEditItem, onAddNewItem }) {
       </Dialog>
 
       {/* Bulk Import Modal */}
-      <BulkImportModal
-        open={showBulkImportModal}
-        onClose={handleCloseBulkImportModal}
-        // You might need to pass a callback to refresh items after import, e.g., onImportSuccess={fetchProducts}
-      />
+      <BulkImportModal open={showBulkImportModal} onClose={handleCloseBulkImportModal} />
     </Box>
   )
 }

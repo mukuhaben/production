@@ -22,7 +22,12 @@ A full-stack e-commerce application built with React.js frontend and Node.js/Exp
 - Axios for API calls
 - React Query for state management
 - Vite for build tooling
-
+cd livetest/frontend
+npm install axios
+# If using CSV import functionality
+cd livetest/frontend
+npm install axios
+npm install papaparse xlsx
 ### Backend
 - Node.js with Express.js
 - PostgreSQL database

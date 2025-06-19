@@ -6,7 +6,7 @@ import { Swiper, SwiperSlide } from "swiper/react"
 import { Autoplay, Navigation } from "swiper/modules"
 import "swiper/css"
 import "swiper/css/navigation"
-import { productsAPI, cmsAPI } from "../../services/api"
+import productService from "../../services/productService.jsx"
 
 // Helper function to format numbers with commas
 const formatNumberWithCommas = (number) => {
@@ -30,21 +30,16 @@ const ProductCategories = ({ header, section = "featured" }) => {
       setLoading(true)
       setError(null)
 
-      let response
-      if (section === "featured") {
-        response = await cmsAPI.getFeaturedProducts({ section: header })
-      } else {
-        response = await productsAPI.getAll({
-          limit: 10,
-          featured: true,
-          category: section,
-        })
-      }
+      const result = await productService.getProducts({
+        limit: 10,
+        featured: true,
+        category: section === "featured" ? undefined : section,
+      })
 
-      if (response.data.success) {
-        setProducts(response.data.data.products || response.data.data || [])
+      if (result.success) {
+        setProducts(result.data.data?.products || result.data.products || [])
       } else {
-        throw new Error("Failed to load products")
+        throw new Error(result.error || "Failed to load products")
       }
     } catch (err) {
       console.error("Error loading products:", err)

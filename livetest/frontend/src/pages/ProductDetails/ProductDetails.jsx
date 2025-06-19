@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useParams } from "react-router-dom"
 import {
   Grid,
   Typography,
@@ -17,16 +18,7 @@ import {
   Box,
 } from "@mui/material"
 import { GridView, ViewList, FilterList } from "@mui/icons-material"
-
-// Removed image imports - replaced with placeholder URLs for build stability
-// import softChairsImage from '../../assets/images/1.png';
-// import sofaChairImage from '../../assets/images/2.png';
-// import kitchenDishesImage from '../../assets/images/11.png';
-// import smartWatchesImage from '../../assets/images/8.png';
-// import kitchenMixerImage from '../../assets/images/9.png';
-// import blendersImage from '../../assets/images/12.png';
-// import homeApplianceImage from '../../assets/images/10.png';
-// import coffeeMakerImage from '../../assets/images/13.png';
+import productService from "../../services/productService.jsx"
 
 const formatPrice = (price) => `${price.toFixed(2)}`
 
@@ -37,14 +29,14 @@ const mockProducts = [
     name: "Soft Chairs",
     price: 49.99,
     originalPrice: 69.99,
-    image: "/placeholder.svg?height=120&width=120", // Placeholder for soft chairs
+    image: "/placeholder.svg?height=120&width=120",
     ranges: [{ cashback: 10 }],
   },
   {
     id: 2,
     name: "Sofa Chair",
     price: 89.99,
-    image: "/placeholder.svg?height=120&width=120", // Placeholder for sofa chair
+    image: "/placeholder.svg?height=120&width=120",
     ranges: [{ cashback: 5 }],
   },
   {
@@ -52,21 +44,21 @@ const mockProducts = [
     name: "Kitchen Dishes",
     price: 39.99,
     originalPrice: 49.99,
-    image: "/placeholder.svg?height=120&width=120", // Placeholder for kitchen dishes
+    image: "/placeholder.svg?height=120&width=120",
     ranges: [],
   },
   {
     id: 4,
     name: "Smart Watch",
     price: 99.99,
-    image: "/placeholder.svg?height=120&width=120", // Placeholder for smart watch
+    image: "/placeholder.svg?height=120&width=120",
     ranges: [{ cashback: 15 }],
   },
   {
     id: 5,
     name: "Kitchen Mixer",
     price: 59.99,
-    image: "/placeholder.svg?height=120&width=120", // Placeholder for kitchen mixer
+    image: "/placeholder.svg?height=120&width=120",
     ranges: [],
   },
   {
@@ -74,21 +66,21 @@ const mockProducts = [
     name: "Blenders",
     price: 34.99,
     originalPrice: 44.99,
-    image: "/placeholder.svg?height=120&width=120", // Placeholder for blenders
+    image: "/placeholder.svg?height=120&width=120",
     ranges: [{ cashback: 5 }],
   },
   {
     id: 7,
     name: "Home Appliance",
     price: 79.99,
-    image: "/placeholder.svg?height=120&width=120", // Placeholder for home appliance
+    image: "/placeholder.svg?height=120&width=120",
     ranges: [],
   },
   {
     id: 8,
     name: "Coffee Maker",
     price: 49.99,
-    image: "/placeholder.svg?height=120&width=120", // Placeholder for coffee maker
+    image: "/placeholder.svg?height=120&width=120",
     ranges: [{ cashback: 8 }],
   },
 ]
@@ -104,7 +96,7 @@ const CategoryCard = ({ category }) => (
       borderRadius: 2,
       p: 2,
       position: "relative",
-      minHeight: 320, // Added fixed height for consistent alignment
+      minHeight: 320,
       "&:hover": {
         boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
       },
@@ -123,7 +115,7 @@ const CategoryCard = ({ category }) => (
           borderRadius: 1,
           px: 1.5,
           py: 0.5,
-          fontSize: 12, // Reduced from 18 to 12
+          fontSize: 12,
           fontWeight: 700,
           zIndex: 1,
         }}
@@ -138,9 +130,9 @@ const CategoryCard = ({ category }) => (
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        height: 140, // Fixed height container
-        mt: 4, // Reduced from 6
-        mb: 1, // Reduced from 2
+        height: 140,
+        mt: 4,
+        mb: 1,
       }}
     >
       <img
@@ -150,30 +142,22 @@ const CategoryCard = ({ category }) => (
           maxWidth: "100%",
           maxHeight: 120,
           objectFit: "contain",
-          margin: "auto", // Center image
+          margin: "auto",
         }}
       />
     </Box>
 
-    {/* Reduced font size */}
-    <Typography
-      variant="body2"
-      color="text.secondary"
-      fontWeight="bold"
-      sx={{ fontSize: "0.65rem" }} // Smaller font
-    >
+    <Typography variant="body2" color="text.secondary" fontWeight="bold" sx={{ fontSize: "0.65rem" }}>
       Item code: XXXXX
     </Typography>
 
-    {/* Reduced font size and added text truncation */}
     <Typography
-      variant="body2" // Changed from body1
+      variant="body2"
       sx={{
         fontWeight: 500,
         my: 1,
-        fontSize: "0.75rem", // Smaller font
+        fontSize: "0.75rem",
         lineHeight: 1.3,
-        // Ensure description doesn't overflow
         display: "-webkit-box",
         WebkitLineClamp: 2,
         WebkitBoxOrient: "vertical",
@@ -188,10 +172,10 @@ const CategoryCard = ({ category }) => (
     <Box
       sx={{
         display: "flex",
-        flexDirection: "row", // Always row to fit all prices
+        flexDirection: "row",
         justifyContent: "space-between",
-        gap: 0.5, // Reduced gap
-        mt: "auto", // Push to bottom of card
+        gap: 0.5,
+        mt: "auto",
       }}
     >
       {[
@@ -203,24 +187,20 @@ const CategoryCard = ({ category }) => (
           key={idx}
           sx={{
             flex: 1,
-            border: "1px solid #e0e0e0", // Lighter border
+            border: "1px solid #e0e0e0",
             borderRadius: 1,
-            p: 0.5, // Reduced padding
+            p: 0.5,
             textAlign: "center",
-            fontSize: 10, // Reduced from 12
+            fontSize: 10,
           }}
         >
-          <Typography
-            variant="body2"
-            fontWeight={600}
-            sx={{ fontSize: "0.6rem", whiteSpace: "nowrap" }} // Smaller font
-          >
+          <Typography variant="body2" fontWeight={600} sx={{ fontSize: "0.6rem", whiteSpace: "nowrap" }}>
             {tier.label}
           </Typography>
           <Typography
             variant="body2"
             sx={{
-              fontSize: "0.6rem", // Smaller font
+              fontSize: "0.6rem",
               whiteSpace: "nowrap",
             }}
           >
@@ -233,11 +213,39 @@ const CategoryCard = ({ category }) => (
 )
 
 const ProductList = () => {
+  const { productId } = useParams()
+  const [product, setProduct] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [view, setView] = useState("grid")
   const [sort, setSort] = useState("")
   const [page, setPage] = useState(1)
   const [priceRange, setPriceRange] = useState([0, 100])
   const [drawerOpen, setDrawerOpen] = useState(false)
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      if (productId) {
+        try {
+          const result = await productService.getProduct(productId)
+          if (result.success) {
+            setProduct(productService.formatProductForDisplay(result.data))
+          } else {
+            setError(result.error || "Failed to fetch product")
+          }
+        } catch (error) {
+          console.error("Error fetching product:", error)
+          setError("An unexpected error occurred.")
+        } finally {
+          setLoading(false)
+        }
+      } else {
+        setLoading(false)
+      }
+    }
+
+    fetchProduct()
+  }, [productId])
 
   const handleViewChange = (newView) => setView(newView)
   const handleSortChange = (e) => setSort(e.target.value)
@@ -245,6 +253,31 @@ const ProductList = () => {
   const handlePriceChange = (event, newValue) => setPriceRange(newValue)
   const toggleDrawer = () => setDrawerOpen(!drawerOpen)
 
+  if (loading) {
+    return <div>Loading...</div>
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>
+  }
+
+  if (productId && !product) {
+    return <div>Product not found</div>
+  }
+
+  // If we have a specific product, show product details
+  if (product) {
+    return (
+      <div>
+        <h1>{product.productName}</h1>
+        <p>Description: {product.description}</p>
+        <p>Price: {product.costPrice}</p>
+        {/* Display other product details here */}
+      </div>
+    )
+  }
+
+  // Otherwise show product list
   return (
     <Box sx={{ p: 2, px: { xs: 2, md: 15 } }}>
       <Stack
@@ -287,8 +320,6 @@ const ProductList = () => {
           <Grid container spacing={2}>
             {mockProducts.map((product) => (
               <Grid item xs={12} sm={6} md={2.4} key={product.id}>
-                {" "}
-                {/* Changed from md={4} to md={2.4} for 5 cards per row */}
                 <CategoryCard category={product} />
               </Grid>
             ))}

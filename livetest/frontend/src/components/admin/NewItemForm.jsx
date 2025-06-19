@@ -29,9 +29,7 @@ import {
   Chip,
 } from "@mui/material"
 import { Upload, Image as ImageIcon, ExpandMore, QrCode } from "@mui/icons-material"
-
-// Add the import for the API service at the top
-import { productsAPI } from "../../services/api"
+import productService from "../../services/productService.jsx"
 
 // Initial form state with all required fields
 const initialFormState = {
@@ -257,59 +255,30 @@ export default function NewItemForm({ categories = [], vendors = [], onSubmit, e
     return Object.keys(newErrors).length === 0
   }
 
-  // Update the handleSubmit function to directly call the API
   const handleSubmit = async (e) => {
     e.preventDefault()
 
     if (validateForm()) {
       try {
-        const formattedData = {
-          ...formData,
-          // Convert string numbers to actual numbers
-          costPrice: Number.parseFloat(formData.costPrice) || 0,
-          sellingPrice1: Number.parseFloat(formData.sellingPrice1) || 0,
-          sellingPrice2: Number.parseFloat(formData.sellingPrice2) || 0,
-          sellingPrice3: Number.parseFloat(formData.sellingPrice3) || 0,
-          qty1: Number.parseInt(formData.qty1) || 0,
-          qty2: Number.parseInt(formData.qty2) || 0,
-          qty3: Number.parseInt(formData.qty3) || 0,
-          vat: Number.parseFloat(formData.vat) || 0,
-          cashbackRate: Number.parseFloat(formData.cashbackRate) || 0,
-          saCashback1stPurchase: Number.parseFloat(formData.saCashback1stPurchase) || 0,
-          saCashback2ndPurchase: Number.parseFloat(formData.saCashback2ndPurchase) || 0,
-          saCashback3rdPurchase: Number.parseFloat(formData.saCashback3rdPurchase) || 0,
-          saCashback4thPurchase: Number.parseFloat(formData.saCashback4thPurchase) || 0,
-          stockUnits: Number.parseInt(formData.stockUnits) || 0,
-          reorderLevel: Number.parseInt(formData.reorderLevel) || 0,
-          orderLevel: Number.parseInt(formData.orderLevel) || 0,
-          alertQuantity: Number.parseInt(formData.alertQuantity) || 0,
-          calculatedProfits,
-          calculatedCashback,
-          createdAt: isEditMode ? editItem.createdAt : new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
+        console.log("Submitting form data:", formData)
 
-        // Call the API directly
-        const response = await productsAPI.create(formattedData)
+        const result = await productService.createProduct(formData)
 
-        if (response.data.success) {
-          // Show success message
+        if (result.success) {
           alert("Product created successfully!")
-
-          // Reset form if not in edit mode
           if (!isEditMode) {
             resetForm()
           }
-
-          // Call the onSubmit callback if provided (for parent component integration)
           if (onSubmit) {
-            onSubmit(formattedData)
+            onSubmit(result.data)
           }
+        } else {
+          console.error("Product creation failed:", result.error)
+          alert(`Failed to create product: ${result.error}`)
         }
       } catch (error) {
         console.error("Error creating product:", error)
-        const errorMessage = error.response?.data?.message || "Failed to create product. Please try again."
-        alert(errorMessage)
+        alert("Failed to create product. Please try again.")
       }
     }
   }
