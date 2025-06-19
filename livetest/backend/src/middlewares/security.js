@@ -107,7 +107,7 @@ export const corsOptions = {
 
     const allowedOrigins = [
       "https://production-kappa.vercel.app",
-      "https://firstcrafttest-owfgqafzx3.vercel.app",
+      "https://firstcrafttest.vercel.app/",
       "http://localhost:3000",
       "http://localhost:5173",
       "http://127.0.0.1:5173",
